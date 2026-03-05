@@ -1,5 +1,23 @@
 import { z } from "zod";
+import { resolve, dirname } from "node:path";
+import { access, constants } from "node:fs/promises";
 import type { BillingoClient } from "../billingo-client.js";
+
+async function validateOutputPath(outputPath: string): Promise<string> {
+  const resolved = resolve(outputPath);
+  // Prevent writing outside user's home directory
+  const home = process.env.HOME || process.env.USERPROFILE || "/tmp";
+  if (!resolved.startsWith(home + "/") && !resolved.startsWith("/tmp/")) {
+    throw new Error(`Output path must be within home directory (${home}) or /tmp`);
+  }
+  // Ensure parent directory exists
+  try {
+    await access(dirname(resolved), constants.W_OK);
+  } catch {
+    throw new Error(`Parent directory does not exist or is not writable: ${dirname(resolved)}`);
+  }
+  return resolved;
+}
 
 const DocumentItemSchema = z.object({
   product_id: z.number().optional(),
@@ -170,10 +188,11 @@ export function registerDocumentTools(
       output_path: z.string().describe("Fájl mentési útvonal (pl. /tmp/szamla.pdf)"),
     },
     async ({ document_id, output_path }: { document_id: number; output_path: string }) => {
+      const safePath = await validateOutputPath(output_path);
       const { data } = await client.requestBinary("GET", `/documents/${document_id}/download`, "application/pdf");
       const fs = await import("node:fs/promises");
-      await fs.writeFile(output_path, data);
-      return { content: [{ type: "text" as const, text: `PDF mentve: ${output_path} (${data.length} bytes)` }] };
+      await fs.writeFile(safePath, data);
+      return { content: [{ type: "text" as const, text: `PDF mentve: ${safePath} (${data.length} bytes)` }] };
     },
   );
 

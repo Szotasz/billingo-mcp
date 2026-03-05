@@ -70,7 +70,7 @@ export class BillingoClient {
     path: string,
     accept: string,
   ): Promise<{ data: Buffer; contentType: string }> {
-    const url = `${BASE_URL}${path}`;
+    const url = new URL(`${BASE_URL}${path}`).toString();
     const res = await fetch(url, {
       method,
       headers: {

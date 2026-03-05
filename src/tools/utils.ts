@@ -9,7 +9,7 @@ export function registerUtilTools(
     "check_tax_number",
     "Adószám ellenőrzése a NAV rendszerében. Visszaadja a cég nevét és címét ha érvényes.",
     {
-      tax_number: z.string().describe("Ellenőrizendő adószám (8 számjegy, pl. 12345678)"),
+      tax_number: z.string().regex(/^\d{8,11}(-\d-\d{2})?$/, "Érvénytelen adószám formátum").describe("Ellenőrizendő adószám (8 számjegy, pl. 12345678)"),
     },
     async ({ tax_number }: { tax_number: string }) => {
       const result = await client.get(`/utils/check-tax-number/${tax_number}`);

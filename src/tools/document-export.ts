@@ -1,5 +1,21 @@
 import { z } from "zod";
+import { resolve, dirname } from "node:path";
+import { access, constants } from "node:fs/promises";
 import type { BillingoClient } from "../billingo-client.js";
+
+async function validateOutputPath(outputPath: string): Promise<string> {
+  const resolved = resolve(outputPath);
+  const home = process.env.HOME || process.env.USERPROFILE || "/tmp";
+  if (!resolved.startsWith(home + "/") && !resolved.startsWith("/tmp/")) {
+    throw new Error(`Output path must be within home directory (${home}) or /tmp`);
+  }
+  try {
+    await access(dirname(resolved), constants.W_OK);
+  } catch {
+    throw new Error(`Parent directory does not exist or is not writable: ${dirname(resolved)}`);
+  }
+  return resolved;
+}
 
 export function registerDocumentExportTools(
   server: { tool: Function },
@@ -27,6 +43,7 @@ export function registerDocumentExportTools(
       output_path: z.string().describe("Fájl mentési útvonal (pl. /tmp/export.xlsx)"),
     },
     async ({ export_id, output_path }: { export_id: number; output_path: string }) => {
+      const safePath = await validateOutputPath(output_path);
       // Poll until ready (max 60 attempts, 2s apart)
       for (let i = 0; i < 60; i++) {
         const status = (await client.get(`/document-export/${export_id}/poll`)) as { status?: string };
@@ -44,8 +61,8 @@ export function registerDocumentExportTools(
         "application/octet-stream",
       );
       const fs = await import("node:fs/promises");
-      await fs.writeFile(output_path, data);
-      return { content: [{ type: "text" as const, text: `Export letöltve: ${output_path} (${data.length} bytes)` }] };
+      await fs.writeFile(safePath, data);
+      return { content: [{ type: "text" as const, text: `Export letöltve: ${safePath} (${data.length} bytes)` }] };
     },
   );
 }
