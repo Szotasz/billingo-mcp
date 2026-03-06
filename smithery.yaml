@@ -1,0 +1,14 @@
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    required:
+      - BILLINGO_API_KEY
+    properties:
+      BILLINGO_API_KEY:
+        type: string
+        title: Billingo API Key
+        description: Billingo API v3 key from app.billingo.hu/api-key
+  commandFunction:
+    file: smithery.js
+    function: startCommand

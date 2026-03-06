@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { resolve, dirname } from "node:path";
 import { access, constants } from "node:fs/promises";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { BillingoClient } from "../billingo-client.js";
 
 async function validateOutputPath(outputPath: string): Promise<string> {
@@ -18,7 +19,7 @@ async function validateOutputPath(outputPath: string): Promise<string> {
 }
 
 export function registerDocumentExportTools(
-  server: { tool: Function },
+  server: McpServer,
   client: BillingoClient,
 ) {
   server.tool(
@@ -29,6 +30,7 @@ export function registerDocumentExportTools(
       end_date: z.string().describe("Vég dátum (YYYY-MM-DD)"),
       document_type: z.enum(["invoice", "proforma", "receipt", "draft", "advance", "waybill", "offer"]).optional().describe("Dokumentum típus szűrő"),
     },
+    { title: "Create Document Export", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     async (params: Record<string, unknown>) => {
       const result = await client.post("/document-export", params);
       return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
@@ -42,6 +44,7 @@ export function registerDocumentExportTools(
       export_id: z.number().describe("Az export ID-ja (create_document_export-ból)"),
       output_path: z.string().describe("Fájl mentési útvonal (pl. /tmp/export.xlsx)"),
     },
+    { title: "Download Document Export", readOnlyHint: true, destructiveHint: false, openWorldHint: true },
     async ({ export_id, output_path }: { export_id: number; output_path: string }) => {
       const safePath = await validateOutputPath(output_path);
       // Poll until ready (max 60 attempts, 2s apart)

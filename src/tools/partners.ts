@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { BillingoClient } from "../billingo-client.js";
 
 const AddressSchema = z.object({
@@ -9,7 +10,7 @@ const AddressSchema = z.object({
 });
 
 export function registerPartnerTools(
-  server: { tool: Function },
+  server: McpServer,
   client: BillingoClient,
 ) {
   server.tool(
@@ -20,6 +21,7 @@ export function registerPartnerTools(
       per_page: z.number().default(25).describe("Elemek száma oldalanként"),
       query: z.string().optional().describe("Keresés név, adószám vagy e-mail alapján"),
     },
+    { title: "List Partners", readOnlyHint: true, destructiveHint: false, openWorldHint: true },
     async (params: Record<string, unknown>) => {
       const result = await client.get("/partners", params as Record<string, string | number | boolean | undefined>);
       return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
@@ -32,6 +34,7 @@ export function registerPartnerTools(
     {
       partner_id: z.number().describe("A partner ID-ja"),
     },
+    { title: "Get Partner", readOnlyHint: true, destructiveHint: false, openWorldHint: true },
     async ({ partner_id }: { partner_id: number }) => {
       const result = await client.get(`/partners/${partner_id}`);
       return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
@@ -65,6 +68,7 @@ export function registerPartnerTools(
       }).optional().describe("Egyéni számlázási beállítások"),
       group_member_tax_number: z.string().optional().describe("Csoportos adószám"),
     },
+    { title: "Create Partner", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     async (params: Record<string, unknown>) => {
       const result = await client.post("/partners", params);
       return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
@@ -87,6 +91,7 @@ export function registerPartnerTools(
       general_ledger_number: z.string().optional().describe("Főkönyvi szám"),
       tax_type: z.enum(["NO_TAX_NUMBER", "HAS_TAX_NUMBER", "TAXPAYER"]).optional().describe("Adó típus"),
     },
+    { title: "Update Partner", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
     async (params: { partner_id: number; [key: string]: unknown }) => {
       const { partner_id, ...body } = params;
       const result = await client.put(`/partners/${partner_id}`, body);
@@ -100,6 +105,7 @@ export function registerPartnerTools(
     {
       partner_id: z.number().describe("A partner ID-ja"),
     },
+    { title: "Delete Partner", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
     async ({ partner_id }: { partner_id: number }) => {
       await client.delete(`/partners/${partner_id}`);
       return { content: [{ type: "text" as const, text: `Partner ${partner_id} sikeresen törölve.` }] };

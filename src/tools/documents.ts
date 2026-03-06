@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { resolve, dirname } from "node:path";
 import { access, constants } from "node:fs/promises";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { BillingoClient } from "../billingo-client.js";
 
 async function validateOutputPath(outputPath: string): Promise<string> {
@@ -32,7 +33,7 @@ const DocumentItemSchema = z.object({
 });
 
 export function registerDocumentTools(
-  server: { tool: Function },
+  server: McpServer,
   client: BillingoClient,
 ) {
   server.tool(
@@ -52,6 +53,7 @@ export function registerDocumentTools(
       type: z.enum(["draft", "proforma", "invoice", "advance", "receipt", "waybill", "offer"]).optional().describe("Bizonylat típusa"),
       query: z.string().optional().describe("Keresés szöveg"),
     },
+    { title: "List Documents", readOnlyHint: true, destructiveHint: false, openWorldHint: true },
     async (params: Record<string, unknown>) => {
       const result = await client.get("/documents", params as Record<string, string | number | boolean | undefined>);
       return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
@@ -64,6 +66,7 @@ export function registerDocumentTools(
     {
       document_id: z.number().describe("A dokumentum ID-ja"),
     },
+    { title: "Get Document", readOnlyHint: true, destructiveHint: false, openWorldHint: true },
     async ({ document_id }: { document_id: number }) => {
       const result = await client.get(`/documents/${document_id}`);
       return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
@@ -97,6 +100,7 @@ export function registerDocumentTools(
       emails: z.array(z.string()).optional().describe("E-mail címek küldéshez"),
       document_notification: z.boolean().default(false).describe("Értesítés küldése a partnernek"),
     },
+    { title: "Create Document", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     async (params: Record<string, unknown>) => {
       const result = await client.post("/documents", params);
       return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
@@ -109,6 +113,7 @@ export function registerDocumentTools(
     {
       document_id: z.number().describe("A sztornózandó dokumentum ID-ja"),
     },
+    { title: "Cancel Document", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
     async ({ document_id }: { document_id: number }) => {
       const result = await client.post(`/documents/${document_id}/cancel`);
       return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
@@ -121,6 +126,7 @@ export function registerDocumentTools(
     {
       document_id: z.number().describe("A törlendő piszkozat ID-ja"),
     },
+    { title: "Delete Draft", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
     async ({ document_id }: { document_id: number }) => {
       await client.delete(`/documents/${document_id}`);
       return { content: [{ type: "text" as const, text: `Piszkozat ${document_id} sikeresen törölve.` }] };
@@ -133,6 +139,7 @@ export function registerDocumentTools(
     {
       document_id: z.number().describe("A proforma dokumentum ID-ja"),
     },
+    { title: "Create From Proforma", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     async ({ document_id }: { document_id: number }) => {
       const result = await client.post(`/documents/${document_id}/create-from-proforma`);
       return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
@@ -145,6 +152,7 @@ export function registerDocumentTools(
     {
       document_id: z.number().describe("A piszkozat dokumentum ID-ja"),
     },
+    { title: "Create From Draft", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     async ({ document_id }: { document_id: number }) => {
       const result = await client.put(`/documents/${document_id}/create-from-draft`);
       return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
@@ -161,6 +169,7 @@ export function registerDocumentTools(
       due_date: z.string().describe("Fizetési határidő (YYYY-MM-DD)"),
       payment_method: z.enum(["artutalas", "cash", "bankcard", "paypal", "szep_card", "coupon", "elore_utalas", "payoneer", "paylike", "barion", "ep_kartya", "compensation", "utalvany", "online_bankcard"]).describe("Fizetési mód"),
     },
+    { title: "Create Modification Document", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     async (params: { document_id: number; items: unknown[]; fulfillment_date: string; due_date: string; payment_method: string }) => {
       const { document_id, ...body } = params;
       const result = await client.post(`/documents/${document_id}/create-modification-document`, body);
@@ -174,6 +183,7 @@ export function registerDocumentTools(
     {
       document_id: z.number().describe("A másolandó dokumentum ID-ja"),
     },
+    { title: "Copy Document", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     async ({ document_id }: { document_id: number }) => {
       const result = await client.post(`/documents/${document_id}/copy`);
       return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
@@ -187,6 +197,7 @@ export function registerDocumentTools(
       document_id: z.number().describe("A dokumentum ID-ja"),
       output_path: z.string().describe("Fájl mentési útvonal (pl. /tmp/szamla.pdf)"),
     },
+    { title: "Download Document", readOnlyHint: true, destructiveHint: false, openWorldHint: true },
     async ({ document_id, output_path }: { document_id: number; output_path: string }) => {
       const safePath = await validateOutputPath(output_path);
       const { data } = await client.requestBinary("GET", `/documents/${document_id}/download`, "application/pdf");
@@ -202,6 +213,7 @@ export function registerDocumentTools(
     {
       document_id: z.number().describe("A dokumentum ID-ja"),
     },
+    { title: "Get Document Public URL", readOnlyHint: true, destructiveHint: false, openWorldHint: true },
     async ({ document_id }: { document_id: number }) => {
       const result = await client.get(`/documents/${document_id}/public-url`);
       return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
@@ -215,6 +227,7 @@ export function registerDocumentTools(
       document_id: z.number().describe("A dokumentum ID-ja"),
       emails: z.array(z.string()).optional().describe("E-mail címek (ha üres, a partner e-mail címére megy)"),
     },
+    { title: "Send Document", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     async ({ document_id, emails }: { document_id: number; emails?: string[] }) => {
       const body = emails && emails.length > 0 ? { emails } : undefined;
       const result = await client.post(`/documents/${document_id}/send`, body);
@@ -228,6 +241,7 @@ export function registerDocumentTools(
     {
       document_id: z.number().describe("A dokumentum ID-ja"),
     },
+    { title: "Get Payment", readOnlyHint: true, destructiveHint: false, openWorldHint: true },
     async ({ document_id }: { document_id: number }) => {
       const result = await client.get(`/documents/${document_id}/payments`);
       return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
@@ -243,6 +257,7 @@ export function registerDocumentTools(
       price: z.number().describe("Fizetett összeg"),
       payment_method: z.enum(["artutalas", "cash", "bankcard", "paypal", "szep_card", "coupon", "elore_utalas", "payoneer", "paylike", "barion", "ep_kartya", "compensation", "utalvany", "online_bankcard"]).describe("Fizetési mód"),
     },
+    { title: "Update Payment", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
     async (params: { document_id: number; date: string; price: number; payment_method: string }) => {
       const { document_id, ...body } = params;
       const result = await client.put(`/documents/${document_id}/payments`, [body]);
@@ -256,6 +271,7 @@ export function registerDocumentTools(
     {
       document_id: z.number().describe("A dokumentum ID-ja"),
     },
+    { title: "Delete Payment", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
     async ({ document_id }: { document_id: number }) => {
       await client.delete(`/documents/${document_id}/payments`);
       return { content: [{ type: "text" as const, text: `Fizetési előzmények törölve a ${document_id} dokumentumhoz.` }] };
@@ -268,6 +284,7 @@ export function registerDocumentTools(
     {
       document_id: z.number().describe("A dokumentum ID-ja"),
     },
+    { title: "Get Online Szamla Status", readOnlyHint: true, destructiveHint: false, openWorldHint: true },
     async ({ document_id }: { document_id: number }) => {
       const result = await client.get(`/documents/${document_id}/online-szamla`);
       return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };

@@ -1,8 +1,9 @@
 import { z } from "zod";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { BillingoClient } from "../billingo-client.js";
 
 export function registerProductTools(
-  server: { tool: Function },
+  server: McpServer,
   client: BillingoClient,
 ) {
   server.tool(
@@ -13,6 +14,7 @@ export function registerProductTools(
       per_page: z.number().default(25).describe("Elemek száma oldalanként"),
       query: z.string().optional().describe("Keresés termék név alapján"),
     },
+    { title: "List Products", readOnlyHint: true, destructiveHint: false, openWorldHint: true },
     async (params: Record<string, unknown>) => {
       const result = await client.get("/products", params as Record<string, string | number | boolean | undefined>);
       return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
@@ -25,6 +27,7 @@ export function registerProductTools(
     {
       product_id: z.number().describe("A termék ID-ja"),
     },
+    { title: "Get Product", readOnlyHint: true, destructiveHint: false, openWorldHint: true },
     async ({ product_id }: { product_id: number }) => {
       const result = await client.get(`/products/${product_id}`);
       return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
@@ -46,6 +49,7 @@ export function registerProductTools(
       general_ledger_taxcode: z.string().optional().describe("Főkönyvi adókód"),
       entitlement: z.string().optional().describe("Jogcím"),
     },
+    { title: "Create Product", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     async (params: Record<string, unknown>) => {
       const result = await client.post("/products", params);
       return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
@@ -68,6 +72,7 @@ export function registerProductTools(
       general_ledger_taxcode: z.string().optional().describe("Főkönyvi adókód"),
       entitlement: z.string().optional().describe("Jogcím"),
     },
+    { title: "Update Product", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
     async (params: { product_id: number; [key: string]: unknown }) => {
       const { product_id, ...body } = params;
       const result = await client.put(`/products/${product_id}`, body);
@@ -81,6 +86,7 @@ export function registerProductTools(
     {
       product_id: z.number().describe("A termék ID-ja"),
     },
+    { title: "Delete Product", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
     async ({ product_id }: { product_id: number }) => {
       await client.delete(`/products/${product_id}`);
       return { content: [{ type: "text" as const, text: `Termék ${product_id} sikeresen törölve.` }] };

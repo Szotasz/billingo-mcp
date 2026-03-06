@@ -4,9 +4,13 @@
   "description": "MCP server for Billingo API v3",
   "type": "module",
   "main": "dist/index.js",
+  "bin": {
+    "billingo-mcp": "dist/cli.js"
+  },
   "scripts": {
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/cli.js",
+    "dev": "tsx src/cli.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1",
@@ -14,6 +18,7 @@
   },
   "devDependencies": {
     "typescript": "^5.8.3",
-    "@types/node": "^22.15.3"
+    "@types/node": "^22.15.3",
+    "tsx": "^4.19.0"
   }
 }

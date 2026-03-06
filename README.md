@@ -4,6 +4,16 @@ An MCP (Model Context Protocol) server for the [Billingo](https://www.billingo.h
 
 [Magyar nyelvű dokumentáció lentebb / Hungarian docs below](#magyar)
 
+## Remote Usage (Smithery)
+
+The easiest way to use this server is through Smithery — no installation needed:
+
+[![Smithery Badge](https://smithery.ai/badge/aiamindennapokban/billingo-mcp)](https://smithery.ai/servers/aiamindennapokban/billingo-mcp)
+
+**[Connect on Smithery](https://smithery.ai/servers/aiamindennapokban/billingo-mcp)**
+
+Smithery will automatically prompt you for your Billingo API key and manage the connection.
+
 ---
 
 ## Features
@@ -17,7 +27,7 @@ An MCP (Model Context Protocol) server for the [Billingo](https://www.billingo.h
 - **Organization** — Retrieve your company data
 - **Utilities** — Verify tax numbers via NAV, get MNB currency exchange rates, list document blocks
 
-## Available Tools (35)
+## Available Tools (35+)
 
 | Category | Tools |
 |---|---|
@@ -36,7 +46,7 @@ An MCP (Model Context Protocol) server for the [Billingo](https://www.billingo.h
 - Node.js 18+
 - A [Billingo](https://www.billingo.hu/) account with an API v3 key ([generate one here](https://app.billingo.hu/api-key))
 
-## Installation
+## Local Installation
 
 ```bash
 git clone https://github.com/Szotasz/billingo-mcp.git
@@ -49,15 +59,14 @@ npm run build
 
 ### Claude Code
 
-Add to your `~/.claude.json` (or project-level `.claude.json`):
+Add to your `~/.claude/settings.json`:
 
 ```json
 {
   "mcpServers": {
     "billingo": {
-      "type": "stdio",
       "command": "node",
-      "args": ["/path/to/billingo-mcp/dist/index.js"],
+      "args": ["/path/to/billingo-mcp/dist/cli.js"],
       "env": {
         "BILLINGO_API_KEY": "your-billingo-api-key"
       }
@@ -75,25 +84,7 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
   "mcpServers": {
     "billingo": {
       "command": "node",
-      "args": ["/path/to/billingo-mcp/dist/index.js"],
-      "env": {
-        "BILLINGO_API_KEY": "your-billingo-api-key"
-      }
-    }
-  }
-}
-```
-
-### Cursor
-
-Add to your `.cursor/mcp.json`:
-
-```json
-{
-  "mcpServers": {
-    "billingo": {
-      "command": "node",
-      "args": ["/path/to/billingo-mcp/dist/index.js"],
+      "args": ["/path/to/billingo-mcp/dist/cli.js"],
       "env": {
         "BILLINGO_API_KEY": "your-billingo-api-key"
       }
@@ -114,18 +105,11 @@ Once configured, you can ask your AI assistant:
 - "Show me unpaid invoices"
 - "Send invoice #456 to client@example.com"
 
-## Development
+## Support
 
-```bash
-# Install dependencies
-npm install
+If you find this project useful, you can support the development:
 
-# Build TypeScript
-npm run build
-
-# Test locally
-BILLINGO_API_KEY=your-key node dist/index.js
-```
+[![Support on Donably](https://img.shields.io/badge/Support-Donably-18b8c4)](https://www.donably.com/ai-a-mindennapokban-szabolccsal)
 
 ## License
 
@@ -138,6 +122,16 @@ MIT
 # Billingo MCP Szerver (Magyar)
 
 MCP (Model Context Protocol) szerver a [Billingo](https://www.billingo.hu/) számlázó API-hoz (v3). Ezzel a szerverrel AI asszisztensek (pl. Claude) természetes nyelven kezelhetik a számlákat, partnereket, termékeket, költségeket és egyéb számlázási feladatokat.
+
+## Távoli használat (Smithery)
+
+A legegyszerűbb módja a szerver használatának, ha a Smithery-n keresztül csatlakozol — nem kell semmit telepítened:
+
+[![Smithery Badge](https://smithery.ai/badge/aiamindennapokban/billingo-mcp)](https://smithery.ai/servers/aiamindennapokban/billingo-mcp)
+
+**[Csatlakozás a Smithery-n](https://smithery.ai/servers/aiamindennapokban/billingo-mcp)**
+
+A Smithery automatikusan bekéri a Billingo API kulcsodat és kezeli a kapcsolatot.
 
 ## Funkciók
 
@@ -155,7 +149,7 @@ MCP (Model Context Protocol) szerver a [Billingo](https://www.billingo.hu/) szá
 - Node.js 18+
 - [Billingo](https://www.billingo.hu/) fiók API v3 kulccsal ([generálás itt](https://app.billingo.hu/api-key))
 
-## Telepítés
+## Helyi telepítés
 
 ```bash
 git clone https://github.com/Szotasz/billingo-mcp.git
@@ -168,15 +162,14 @@ npm run build
 
 ### Claude Code
 
-Add hozzá a `~/.claude.json` fájlhoz (vagy projekt szintű `.claude.json`-hoz):
+Add hozzá a `~/.claude/settings.json` fájlhoz:
 
 ```json
 {
   "mcpServers": {
     "billingo": {
-      "type": "stdio",
       "command": "node",
-      "args": ["/útvonal/billingo-mcp/dist/index.js"],
+      "args": ["/elérési/út/billingo-mcp/dist/cli.js"],
       "env": {
         "BILLINGO_API_KEY": "a-te-billingo-api-kulcsod"
       }
@@ -194,25 +187,7 @@ Add hozzá a Claude Desktop konfighoz (`~/Library/Application Support/Claude/cla
   "mcpServers": {
     "billingo": {
       "command": "node",
-      "args": ["/útvonal/billingo-mcp/dist/index.js"],
-      "env": {
-        "BILLINGO_API_KEY": "a-te-billingo-api-kulcsod"
-      }
-    }
-  }
-}
-```
-
-### Cursor
-
-Add hozzá a `.cursor/mcp.json` fájlhoz:
-
-```json
-{
-  "mcpServers": {
-    "billingo": {
-      "command": "node",
-      "args": ["/útvonal/billingo-mcp/dist/index.js"],
+      "args": ["/elérési/út/billingo-mcp/dist/cli.js"],
       "env": {
         "BILLINGO_API_KEY": "a-te-billingo-api-kulcsod"
       }
@@ -233,18 +208,11 @@ A beállítás után az AI asszisztensnek mondhatod:
 - "Mutasd a kifizetetlen számlákat"
 - "Küldd el a 456-os számlát a ugyfel@pelda.hu címre"
 
-## Fejlesztés
+## Támogatás
 
-```bash
-# Függőségek telepítése
-npm install
+Ha hasznosnak találtad ezt a projektet, támogathatod a fejlesztést:
 
-# TypeScript fordítás
-npm run build
-
-# Helyi teszt
-BILLINGO_API_KEY=a-te-kulcsod node dist/index.js
-```
+[![Támogass a Donably-n](https://img.shields.io/badge/T%C3%A1mogat%C3%A1s-Donably-18b8c4)](https://www.donably.com/ai-a-mindennapokban-szabolccsal)
 
 ## Licensz
 

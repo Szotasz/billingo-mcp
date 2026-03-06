@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { BillingoClient } from "../billingo-client.js";
 
 const SpendingItemSchema = z.object({
@@ -13,7 +14,7 @@ const SpendingItemSchema = z.object({
 });
 
 export function registerSpendingTools(
-  server: { tool: Function },
+  server: McpServer,
   client: BillingoClient,
 ) {
   server.tool(
@@ -28,6 +29,7 @@ export function registerSpendingTools(
       category: z.string().optional().describe("Kategória szűrő"),
       q: z.string().optional().describe("Keresés"),
     },
+    { title: "List Spending", readOnlyHint: true, destructiveHint: false, openWorldHint: true },
     async (params: Record<string, unknown>) => {
       const result = await client.get("/spending", params as Record<string, string | number | boolean | undefined>);
       return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
@@ -40,6 +42,7 @@ export function registerSpendingTools(
     {
       spending_id: z.number().describe("A költség ID-ja"),
     },
+    { title: "Get Spending", readOnlyHint: true, destructiveHint: false, openWorldHint: true },
     async ({ spending_id }: { spending_id: number }) => {
       const result = await client.get(`/spending/${spending_id}`);
       return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
@@ -62,6 +65,7 @@ export function registerSpendingTools(
       payment_method: z.enum(["artutalas", "cash", "bankcard", "paypal", "szep_card", "coupon", "elore_utalas", "payoneer", "paylike", "barion", "ep_kartya", "compensation", "utalvany", "online_bankcard"]).describe("Fizetési mód"),
       items: z.array(SpendingItemSchema).describe("Tételek"),
     },
+    { title: "Create Spending", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     async (params: Record<string, unknown>) => {
       const result = await client.post("/spending", params);
       return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
@@ -85,6 +89,7 @@ export function registerSpendingTools(
       payment_method: z.enum(["artutalas", "cash", "bankcard", "paypal", "szep_card", "coupon", "elore_utalas", "payoneer", "paylike", "barion", "ep_kartya", "compensation", "utalvany", "online_bankcard"]).optional().describe("Fizetési mód"),
       items: z.array(SpendingItemSchema).optional().describe("Tételek"),
     },
+    { title: "Update Spending", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
     async (params: { spending_id: number; [key: string]: unknown }) => {
       const { spending_id, ...body } = params;
       const result = await client.put(`/spending/${spending_id}`, body);
@@ -98,6 +103,7 @@ export function registerSpendingTools(
     {
       spending_id: z.number().describe("A költség ID-ja"),
     },
+    { title: "Delete Spending", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
     async ({ spending_id }: { spending_id: number }) => {
       await client.delete(`/spending/${spending_id}`);
       return { content: [{ type: "text" as const, text: `Költség ${spending_id} sikeresen törölve.` }] };
