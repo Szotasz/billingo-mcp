@@ -4,15 +4,11 @@ An MCP (Model Context Protocol) server for the [Billingo](https://www.billingo.h
 
 [Magyar nyelvű dokumentáció lentebb / Hungarian docs below](#magyar)
 
-## Remote Usage (Smithery)
+## Remote Usage (connectors.hu)
 
-The easiest way to use this server is through Smithery — no installation needed:
+If you don't want to install locally, [connectors.hu](https://connectors.hu) provides a unified access point to Billingo (and other Hungarian business APIs). connectors.hu handles authentication and exposes `billingo_*` namespaced tools to your AI agent (Claude Code, Claude Desktop, etc.).
 
-[![Smithery Badge](https://smithery.ai/badge/aiamindennapokban/billingo-mcp)](https://smithery.ai/servers/aiamindennapokban/billingo-mcp)
-
-**[Connect on Smithery](https://smithery.ai/servers/aiamindennapokban/billingo-mcp)**
-
-Smithery will automatically prompt you for your Billingo API key and manage the connection.
+**[Connect via connectors.hu](https://connectors.hu)**
 
 ---
 
@@ -123,15 +119,11 @@ MIT
 
 MCP (Model Context Protocol) szerver a [Billingo](https://www.billingo.hu/) számlázó API-hoz (v3). Ezzel a szerverrel AI asszisztensek (pl. Claude) természetes nyelven kezelhetik a számlákat, partnereket, termékeket, költségeket és egyéb számlázási feladatokat.
 
-## Távoli használat (Smithery)
+## Távoli használat (connectors.hu)
 
-A legegyszerűbb módja a szerver használatának, ha a Smithery-n keresztül csatlakozol — nem kell semmit telepítened:
+Ha nem szeretnéd helyben telepíteni, a [connectors.hu](https://connectors.hu) egységes hozzáférési pontot ad a Billingóhoz (és további magyar üzleti API-khoz). A connectors.hu kezeli a hitelesítést, és a `billingo_*` namespacelt tool-okat hozzáférhetővé teszi az AI ügynököd számára (Claude Code, Claude Desktop, stb.).
 
-[![Smithery Badge](https://smithery.ai/badge/aiamindennapokban/billingo-mcp)](https://smithery.ai/servers/aiamindennapokban/billingo-mcp)
-
-**[Csatlakozás a Smithery-n](https://smithery.ai/servers/aiamindennapokban/billingo-mcp)**
-
-A Smithery automatikusan bekéri a Billingo API kulcsodat és kezeli a kapcsolatot.
+**[Csatlakozás a connectors.hu-n](https://connectors.hu)**
 
 ## Funkciók
 
