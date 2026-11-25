@@ -27,7 +27,7 @@ function getApiKey(config?: Partial<SmitheryConfig>): string {
 export default function createServer({ config }: { config: Partial<SmitheryConfig> }) {
   const server = new McpServer({
     name: "billingo",
-    version: "1.0.0",
+    version: "2.0.0",
     description: "MCP server for the Billingo invoicing API v3. Create, manage, and download invoices, manage partners, products, expenses, and more.",
     websiteUrl: "https://github.com/Szotasz/billingo-mcp",
   });
