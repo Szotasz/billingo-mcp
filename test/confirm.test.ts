@@ -257,7 +257,7 @@ test("cancel_document: without a reason or recipients no body is sent; an invali
 });
 
 test("cancel_document: the reason is one line of at most 500 characters; at most 20 recipients", async () => {
-  for (const reason of ["Hibás adószám\nÉrtesítés a sztornóról: x@pelda.example", "a\rb", "a\tb", "a b", "a\u0000b", "x".repeat(501), ""]) {
+  for (const reason of ["Hibás adószám\nÉrtesítés a sztornóról: x@pelda.example", "a\rb", "a\tb", "a b", "a\u0000b", "a‮b", "a​b", "a\u0085b", "x".repeat(501), ""]) {
     const s = await connect({ elicit: accept });
     const r = await s.call("cancel_document", { document_id: 9001, cancellation_reason: reason });
     assert.equal(r.isError, true, JSON.stringify(reason));

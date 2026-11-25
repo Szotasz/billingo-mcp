@@ -151,8 +151,9 @@ export function registerDocumentTools(
         // The API's DocumentCancellation body: both strings, the recipients comma-separated in one string.
         // One line, at most 500 characters: the reason goes into the confirmation summary, the owner's only check before
         // an irreversible step, and it often comes from a customer's mail. A line break or a control character could
-        // forge a line of the tool's own (Dani's review on #10).
-        cancellation_reason: z.string().min(1).max(500).regex(/^[^\p{Cc}\p{Zl}\p{Zp}]+$/u, "egysoros, vezérlőkarakter nélkül")
+        // forge a line of the tool's own; a format character (right-to-left override, zero-width space) could reorder
+        // the line it is in (Dani's review on #10).
+        cancellation_reason: z.string().min(1).max(500).regex(/^[^\p{Cc}\p{Cf}\p{Zl}\p{Zp}]+$/u, "egysoros, vezérlő- és formázókarakter nélkül")
           .optional().describe("A sztornó oka, egy sorban, legfeljebb 500 karakter (megjegyzés a sztornó bizonylaton)"),
         cancellation_recipients: z.array(z.email()).min(1).max(20).optional().describe("Kiknek menjen értesítés a sztornóról (e-mail címek, legfeljebb 20)"),
         confirmation_id: confirmationIdSchema,
