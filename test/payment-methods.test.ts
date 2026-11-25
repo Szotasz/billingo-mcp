@@ -4,6 +4,7 @@ import { z } from "zod";
 import { PAYMENT_METHODS } from "../src/tools/payment-methods.js";
 import { registerDocumentTools } from "../src/tools/documents.js";
 import { registerSpendingTools } from "../src/tools/spending.js";
+import { registerPartnerTools } from "../src/tools/partners.js";
 
 // The tools are registered on a stand-in server that only records each tool's input shape.
 // The client is never called: these tests send nothing to the Billingo API.
@@ -47,3 +48,13 @@ for (const [name, register] of TOOLS_WITH_PAYMENT_METHOD) {
     assert.equal(field.safeParse("compensation").success, false);
   });
 }
+
+test("create_partner: the partner's default payment method (custom_billing_settings) takes the API's values too", () => {
+  const shape = shapesOf(registerPartnerTools).get("create_partner");
+  const settings = shape!.custom_billing_settings as z.ZodOptional<z.ZodObject<Shape>>;
+  const field = settings.unwrap().shape.payment_method;
+  assert.equal(field.safeParse("wire_transfer").success, true);
+  assert.equal(field.safeParse(undefined).success, true);
+  assert.equal(field.safeParse("artutalas").success, false);
+  assert.equal(field.safeParse("anything").success, false);
+});
