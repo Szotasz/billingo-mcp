@@ -80,6 +80,28 @@ export async function documentLine(client: BillingoClient, documentId: number): 
   }
 }
 
+/**
+ * Who a send reaches. With explicit addresses those; without, the ACTUAL addresses of the document's partner, read
+ * from the document (and the partner record when the document does not carry them). A partner's address can be
+ * changed without a confirmation (update_partner), so "the partner's address" alone would not say where it goes.
+ */
+export async function recipientLine(client: BillingoClient, documentId: number, emails?: string[]): Promise<string> {
+  if (emails && emails.length > 0) return `Címzett: ${emails.join(", ")}`;
+  const list = (v: unknown) => (Array.isArray(v) ? v.filter((e): e is string => typeof e === "string" && e.length > 0) : []);
+  try {
+    const d = (await client.get(`/documents/${documentId}`)) as Record<string, unknown>;
+    const partner = (d.partner ?? {}) as Record<string, unknown>;
+    let found = list(partner.emails);
+    if (found.length === 0 && typeof partner.id === "number") {
+      found = list(((await client.get(`/partners/${partner.id}`)) as Record<string, unknown>)?.emails);
+    }
+    if (found.length > 0) return `Címzett: ${found.join(", ")} (a partner e-mail címe)`;
+    return "Címzett: a partnernek nincs olvasható e-mail címe; a küldés előtt ellenőrizd, hová megy";
+  } catch {
+    return "Címzett: a partner e-mail címe nem olvasható; a küldés előtt ellenőrizd, hová megy";
+  }
+}
+
 export async function namedLine(client: BillingoClient, label: string, path: string, id: number, field = "name"): Promise<string> {
   return `${label}: ${await name(client, path, field)} (#${id})`;
 }

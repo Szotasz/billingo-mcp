@@ -5,7 +5,7 @@ import { access, constants } from "node:fs/promises";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { BillingoClient } from "../billingo-client.js";
 import { ConfirmationStore, confirmationIdSchema, withConfirmation } from "../confirm.js";
-import { documentLine, itemLines, partnerLine, totals, type ItemLike } from "../summaries.js";
+import { documentLine, itemLines, partnerLine, recipientLine, totals, type ItemLike } from "../summaries.js";
 
 async function validateOutputPath(outputPath: string): Promise<string> {
   const resolved = resolve(outputPath);
@@ -246,12 +246,20 @@ export function registerDocumentTools(
     "Számla másolása (új számla készítése egy meglévő alapján)",
     {
       document_id: z.number().describe("A másolandó dokumentum ID-ja"),
+      confirmation_id: confirmationIdSchema,
     },
     { title: "Copy Document", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
-    async ({ document_id }: { document_id: number }) => {
-      const result = await client.post(`/documents/${document_id}/copy`);
-      return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
-    },
+    // Confirmed until it is measured on a test account whether the copy is a draft or a document of the same type:
+    // the copy of an invoice may be a new invoice that goes to the NAV.
+    confirm<{ document_id: number; confirmation_id?: string }>(
+      "copy_document",
+      async ({ document_id }) =>
+        `Bizonylat másolása; a másolat új bizonylat lehet (számla esetén a NAV felé is kimehet):\n${await documentLine(client, document_id)}`,
+      async ({ document_id }) => {
+        const result = await client.post(`/documents/${document_id}/copy`);
+        return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
+      },
+    ),
   );
 
   server.tool(
@@ -296,7 +304,7 @@ export function registerDocumentTools(
     confirm<{ document_id: number; emails?: string[]; confirmation_id?: string }>(
       "send_document",
       async ({ document_id, emails }) =>
-        `Bizonylat kiküldése e-mailben, a levél nem hívható vissza:\n${await documentLine(client, document_id)}\nCímzett: ${emails && emails.length > 0 ? emails.join(", ") : "a partner e-mail címe"}`,
+        `Bizonylat kiküldése e-mailben, a levél nem hívható vissza:\n${await documentLine(client, document_id)}\n${await recipientLine(client, document_id, emails)}`,
       async ({ document_id, emails }) => {
         const body = emails && emails.length > 0 ? { emails } : undefined;
         const result = await client.post(`/documents/${document_id}/send`, body);

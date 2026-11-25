@@ -28,8 +28,8 @@ after(() => {
   assert.deepEqual(realFetchCalls, [], "no test reached the real network");
 });
 
-const PARTNER = { id: 501, name: "Példa Kft." };
-const DOC = { id: 9001, invoice_number: "TEST-2026-1", type: "invoice", partner: { name: "Példa Kft." }, gross_total: 25400, currency: "HUF" };
+const PARTNER = { id: 501, name: "Példa Kft.", emails: ["szamla@pelda.example"] };
+const DOC = { id: 9001, invoice_number: "TEST-2026-1", type: "invoice", partner: { id: 501, name: "Példa Kft." }, gross_total: 25400, currency: "HUF" };
 
 interface Call { method: string; path: string; body?: unknown }
 
@@ -174,6 +174,17 @@ test("without elicitation: an id is bound to its tool and arguments, and it expi
   assert.deepEqual(s.writes(), []);
 });
 
+test("send_document: without addresses the summary names the partner's ACTUAL address, read from Billingo", async () => {
+  const s = await connect({ elicit: () => ({ action: "decline" }) });
+  await s.call("send_document", { document_id: 9001 });
+  assert.ok(s.asked[0].includes("szamla@pelda.example"), "the partner's address is shown");
+  assert.deepEqual(s.writes(), []);
+  const explicit = await connect({ elicit: () => ({ action: "decline" }) });
+  await explicit.call("send_document", { document_id: 9001, emails: ["konyveles@example.com"] });
+  assert.ok(explicit.asked[0].includes("konyveles@example.com"));
+  assert.ok(!explicit.asked[0].includes("szamla@pelda.example"), "explicit addresses replace the partner's");
+});
+
 const GUARDED: Array<[string, Record<string, unknown>]> = [
   ["create_document", INVOICE],
   ["cancel_document", { document_id: 9001 }],
@@ -182,6 +193,7 @@ const GUARDED: Array<[string, Record<string, unknown>]> = [
   ["create_from_draft", { document_id: 9001 }],
   ["create_modification_document", { document_id: 9001, items: INVOICE.items, fulfillment_date: "2026-11-25", due_date: "2026-12-03", payment_method: "wire_transfer" }],
   ["send_document", { document_id: 9001, emails: ["konyveles@example.com"] }],
+  ["copy_document", { document_id: 9001 }],
   ["update_payment", { document_id: 9001, date: "2026-11-25", price: 25400, payment_method: "wire_transfer" }],
   ["delete_payment", { document_id: 9001 }],
   ["delete_partner", { partner_id: 501 }],

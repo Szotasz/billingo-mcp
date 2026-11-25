@@ -39,10 +39,11 @@ If you don't want to install locally, [connectors.hu](https://connectors.hu) pro
 
 ## Confirmations
 
-The tools that cannot be undone or that reach someone outside ask for a confirmation before they write anything: `create_document` (any type except `draft`), `cancel_document`, `create_from_proforma`, `create_from_draft`, `create_modification_document`, `send_document`, `update_payment`, `delete_payment`, `delete_draft`, `delete_partner`, `delete_product`, `delete_spending`, `delete_bank_account`.
+The tools that cannot be undone or that reach someone outside ask for a confirmation before they write anything: `create_document` (any type except `draft`), `cancel_document`, `create_from_proforma`, `create_from_draft`, `create_modification_document`, `copy_document`, `send_document`, `update_payment`, `delete_payment`, `delete_draft`, `delete_partner`, `delete_product`, `delete_spending`, `delete_bank_account`.
 
 - **Clients with elicitation** (MCP form elicitation): the server shows the user a summary (customer, items, net / VAT / gross, payment method, email recipients) and runs the tool only after an accept with the box checked. A decline or a cancel runs nothing.
 - **Clients without elicitation**: the first call returns the summary and a `confirmation_id`, and nothing is written. A second call with the same arguments plus that id runs the tool. The id is single-use, bound to the tool and its arguments, and valid for 5 minutes.
+  This path is a brake, not a lock: the model itself receives the id, so it depends on the model showing the summary to the user and waiting for an answer. Only elicitation asks the user directly.
 
 Read-only tools and creating a draft are not affected.
 
@@ -147,10 +148,11 @@ Ha nem szeretnéd helyben telepíteni, a [connectors.hu](https://connectors.hu) 
 
 ## Megerősítés
 
-A visszavonhatatlan és a kifelé ható eszközök írás előtt megerősítést kérnek: `create_document` (a `draft` kivételével minden típus), `cancel_document`, `create_from_proforma`, `create_from_draft`, `create_modification_document`, `send_document`, `update_payment`, `delete_payment`, `delete_draft`, `delete_partner`, `delete_product`, `delete_spending`, `delete_bank_account`.
+A visszavonhatatlan és a kifelé ható eszközök írás előtt megerősítést kérnek: `create_document` (a `draft` kivételével minden típus), `cancel_document`, `create_from_proforma`, `create_from_draft`, `create_modification_document`, `copy_document`, `send_document`, `update_payment`, `delete_payment`, `delete_draft`, `delete_partner`, `delete_product`, `delete_spending`, `delete_bank_account`.
 
 - **Elicitationt támogató kliens**: a szerver összefoglalót mutat a felhasználónak (vevő, tételek, nettó / áfa / bruttó, fizetési mód, e-mail címzettek), és csak bepipált elfogadás után hajtja végre. Elutasítás vagy megszakítás esetén semmi nem történik.
 - **Elicitation nélküli kliens**: az első hívás csak az összefoglalót és egy `confirmation_id`-t ad vissza, írás nincs. Ugyanazokkal a paraméterekkel és ezzel az azonosítóval hívva fut le. Az azonosító egyszer használható, az eszközhöz és a paraméterekhez kötött, és 5 percig érvényes.
+  Ez az út fék, nem zár: az azonosítót maga a modell kapja meg, tehát azon múlik, hogy a modell megmutatja-e az összefoglalót a felhasználónak, és megvárja-e a válaszát. A felhasználót közvetlenül csak az elicitation kérdezi meg.
 
 Az olvasó eszközöket és a piszkozat létrehozását ez nem érinti.
 
