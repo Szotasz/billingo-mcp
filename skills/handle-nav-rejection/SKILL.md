@@ -11,9 +11,12 @@ Every issued invoice is reported to the NAV (Online Számla). The report is asyn
 
 Use `get_online_szamla_status` with the `document_id`.
 
-- **Accepted:** `done` with no validation error. Only this counts as success.
-- **Not final yet:** `sent`, `received`, `processing` and similar. `sent` means the report left, not that the NAV accepted it; an invoice can sit at `sent` for a while and still end rejected. Check again later instead of reporting success.
-- **Rejected or failed:** a validation error, an invalid tax number, a technical error, or an aborted report. Read the whole record, not only the first error field: the cause is often in the partner data (for example an empty or truncated tax number).
+- **Right after issuing:** the status can answer "not found" for a short while. The report has not been created yet; check again later.
+- **`sent`:** the report is being processed. It is not accepted: an invoice can sit at `sent` for a while and still end rejected. Check again later instead of reporting success.
+- **`done`** with no validation error: accepted. Final, and the only success.
+- **`aborted`:** rejected by the NAV. Final. Read the whole record, not only the first error field: the cause is often in the partner data (for example an empty or truncated tax number).
+
+Keep checking until the status is `done` or `aborted`; nothing else is final.
 
 ## An issued invoice cannot be edited
 
