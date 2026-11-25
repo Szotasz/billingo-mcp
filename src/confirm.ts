@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { z } from "zod";
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/server";
 
 // A confirmation step in front of every tool that cannot be undone or that reaches someone outside (issuing a
 // non-draft document, cancelling, sending, deleting, recording a payment).

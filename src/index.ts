@@ -1,4 +1,4 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { BillingoClient } from "./billingo-client.js";
 import { ConfirmationStore } from "./confirm.js";
@@ -44,12 +44,14 @@ export default function createServer({ config }: { config: Partial<SmitheryConfi
   registerOrganizationTools(server, client);
   registerUtilTools(server, client);
 
-  server.prompt(
+  server.registerPrompt(
     "list-invoices",
-    "List recent invoices with optional filters",
     {
-      type: z.enum(["invoice", "proforma", "draft"]).optional().describe("Document type filter"),
-      status: z.enum(["paid", "outstanding", "expired"]).optional().describe("Payment status filter"),
+      description: "List recent invoices with optional filters",
+      argsSchema: z.object({
+        type: z.enum(["invoice", "proforma", "draft"]).optional().describe("Document type filter"),
+        status: z.enum(["paid", "outstanding", "expired"]).optional().describe("Payment status filter"),
+      }),
     },
     ({ type, status }) => ({
       messages: [{
@@ -59,14 +61,16 @@ export default function createServer({ config }: { config: Partial<SmitheryConfi
           text: `List my recent ${type || ""} invoices${status ? ` with status ${status}` : ""} using list_documents. Show them in a table with document number, date, partner name, amount, and payment status.`,
         },
       }],
-    })
+    }),
   );
 
-  server.prompt(
+  server.registerPrompt(
     "check-tax-number",
-    "Verify a Hungarian tax number via NAV",
     {
-      taxNumber: z.string().describe("8-digit Hungarian tax number"),
+      description: "Verify a Hungarian tax number via NAV",
+      argsSchema: z.object({
+        taxNumber: z.string().describe("8-digit Hungarian tax number"),
+      }),
     },
     ({ taxNumber }) => ({
       messages: [{
@@ -76,15 +80,17 @@ export default function createServer({ config }: { config: Partial<SmitheryConfi
           text: `Check the tax number ${taxNumber} using check_tax_number. Show the company name and validity status.`,
         },
       }],
-    })
+    }),
   );
 
-  server.prompt(
+  server.registerPrompt(
     "exchange-rates",
-    "Get current MNB exchange rates",
     {
-      from: z.string().default("EUR").describe("Source currency code"),
-      to: z.string().default("HUF").describe("Target currency code"),
+      description: "Get current MNB exchange rates",
+      argsSchema: z.object({
+        from: z.string().default("EUR").describe("Source currency code"),
+        to: z.string().default("HUF").describe("Target currency code"),
+      }),
     },
     ({ from, to }) => ({
       messages: [{
@@ -94,7 +100,7 @@ export default function createServer({ config }: { config: Partial<SmitheryConfi
           text: `Get the current exchange rate from ${from} to ${to} using get_currency_rates.`,
         },
       }],
-    })
+    }),
   );
 
   return server.server;

@@ -2,7 +2,7 @@ import { z } from "zod";
 import { paymentMethodSchema } from "./payment-methods.js";
 import { resolve, dirname } from "node:path";
 import { access, constants } from "node:fs/promises";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { McpServer } from "@modelcontextprotocol/server";
 import type { BillingoClient } from "../billingo-client.js";
 import { ConfirmationStore, confirmationIdSchema, withConfirmation } from "../confirm.js";
 import { documentLine, itemLines, partnerLine, recipientLine, totals, type ItemLike } from "../summaries.js";
@@ -43,72 +43,78 @@ export function registerDocumentTools(
   const confirm = <A extends Record<string, unknown>>(tool: string, describe: (a: A) => Promise<string> | string, run: (a: A) => Promise<{ content: Array<{ type: "text"; text: string }> }>, needed?: (a: A) => boolean) =>
     withConfirmation<A>({ server, store, tool, describe, run, needed });
 
-  server.tool(
+  server.registerTool(
     "list_documents",
-    "Számlák/bizonylatok listázása szűrőkkel",
     {
-      page: z.number().default(1).describe("Oldalszám"),
-      per_page: z.number().default(25).describe("Elemek száma oldalanként (max 100)"),
-      block_id: z.number().optional().describe("Számlatömb ID"),
-      partner_id: z.number().optional().describe("Partner ID"),
-      payment_method: paymentMethodSchema.optional().describe("Fizetési mód"),
-      payment_status: z.enum(["paid", "outstanding", "expired"]).optional().describe("Fizetési státusz"),
-      start_date: z.string().optional().describe("Kezdő dátum (YYYY-MM-DD)"),
-      end_date: z.string().optional().describe("Vég dátum (YYYY-MM-DD)"),
-      start_number: z.string().optional().describe("Kezdő sorszám"),
-      end_number: z.string().optional().describe("Vég sorszám"),
-      type: z.enum(["draft", "proforma", "invoice", "advance", "receipt", "waybill", "offer"]).optional().describe("Bizonylat típusa"),
-      query: z.string().optional().describe("Keresés szöveg"),
+      description: "Számlák/bizonylatok listázása szűrőkkel",
+      inputSchema: z.object({
+        page: z.number().default(1).describe("Oldalszám"),
+        per_page: z.number().default(25).describe("Elemek száma oldalanként (max 100)"),
+        block_id: z.number().optional().describe("Számlatömb ID"),
+        partner_id: z.number().optional().describe("Partner ID"),
+        payment_method: paymentMethodSchema.optional().describe("Fizetési mód"),
+        payment_status: z.enum(["paid", "outstanding", "expired"]).optional().describe("Fizetési státusz"),
+        start_date: z.string().optional().describe("Kezdő dátum (YYYY-MM-DD)"),
+        end_date: z.string().optional().describe("Vég dátum (YYYY-MM-DD)"),
+        start_number: z.string().optional().describe("Kezdő sorszám"),
+        end_number: z.string().optional().describe("Vég sorszám"),
+        type: z.enum(["draft", "proforma", "invoice", "advance", "receipt", "waybill", "offer"]).optional().describe("Bizonylat típusa"),
+        query: z.string().optional().describe("Keresés szöveg"),
+      }),
+      annotations: { title: "List Documents", readOnlyHint: true, destructiveHint: false, openWorldHint: true },
     },
-    { title: "List Documents", readOnlyHint: true, destructiveHint: false, openWorldHint: true },
     async (params: Record<string, unknown>) => {
       const result = await client.get("/documents", params as Record<string, string | number | boolean | undefined>);
       return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
     },
   );
 
-  server.tool(
+  server.registerTool(
     "get_document",
-    "Számla/bizonylat részleteinek lekérése ID alapján",
     {
-      document_id: z.number().describe("A dokumentum ID-ja"),
+      description: "Számla/bizonylat részleteinek lekérése ID alapján",
+      inputSchema: z.object({
+        document_id: z.number().describe("A dokumentum ID-ja"),
+      }),
+      annotations: { title: "Get Document", readOnlyHint: true, destructiveHint: false, openWorldHint: true },
     },
-    { title: "Get Document", readOnlyHint: true, destructiveHint: false, openWorldHint: true },
     async ({ document_id }: { document_id: number }) => {
       const result = await client.get(`/documents/${document_id}`);
       return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
     },
   );
 
-  server.tool(
+  server.registerTool(
     "create_document",
-    "Új számla/bizonylat létrehozása. A type mező határozza meg a bizonylat típusát (invoice, proforma, draft, stb.).",
     {
-      partner_id: z.number().describe("Partner ID"),
-      block_id: z.number().describe("Számlatömb ID"),
-      type: z.enum(["draft", "proforma", "invoice", "advance", "receipt", "waybill", "offer"]).describe("Bizonylat típusa"),
-      fulfillment_date: z.string().describe("Teljesítés dátuma (YYYY-MM-DD)"),
-      due_date: z.string().describe("Fizetési határidő (YYYY-MM-DD)"),
-      payment_method: paymentMethodSchema.describe("Fizetési mód"),
-      language: z.enum(["hu", "en", "de", "fr", "hr", "it", "ro", "sk", "es"]).default("hu").describe("Nyelv"),
-      currency: z.string().default("HUF").describe("Pénznem (pl. HUF, EUR, USD)"),
-      conversion_rate: z.number().optional().describe("Átváltási árfolyam (ha nem HUF)"),
-      electronic: z.boolean().default(false).describe("Elektronikus számla"),
-      paid: z.boolean().default(false).describe("Fizetve státusz"),
-      items: z.array(DocumentItemSchema).describe("Tételek listája"),
-      comment: z.string().optional().describe("Megjegyzés"),
-      settings: z.object({
-        mediated_service: z.boolean().optional(),
-        without_financial_fulfillment: z.boolean().optional(),
-        online_payment: z.string().optional(),
-        round: z.enum(["none", "one", "five", "ten"]).optional(),
-        place_id: z.number().optional(),
-      }).optional().describe("Számla beállítások"),
-      emails: z.array(z.string()).optional().describe("E-mail címek küldéshez"),
-      document_notification: z.boolean().default(false).describe("Értesítés küldése a partnernek"),
-      confirmation_id: confirmationIdSchema,
+      description: "Új számla/bizonylat létrehozása. A type mező határozza meg a bizonylat típusát (invoice, proforma, draft, stb.).",
+      inputSchema: z.object({
+        partner_id: z.number().describe("Partner ID"),
+        block_id: z.number().describe("Számlatömb ID"),
+        type: z.enum(["draft", "proforma", "invoice", "advance", "receipt", "waybill", "offer"]).describe("Bizonylat típusa"),
+        fulfillment_date: z.string().describe("Teljesítés dátuma (YYYY-MM-DD)"),
+        due_date: z.string().describe("Fizetési határidő (YYYY-MM-DD)"),
+        payment_method: paymentMethodSchema.describe("Fizetési mód"),
+        language: z.enum(["hu", "en", "de", "fr", "hr", "it", "ro", "sk", "es"]).default("hu").describe("Nyelv"),
+        currency: z.string().default("HUF").describe("Pénznem (pl. HUF, EUR, USD)"),
+        conversion_rate: z.number().optional().describe("Átváltási árfolyam (ha nem HUF)"),
+        electronic: z.boolean().default(false).describe("Elektronikus számla"),
+        paid: z.boolean().default(false).describe("Fizetve státusz"),
+        items: z.array(DocumentItemSchema).describe("Tételek listája"),
+        comment: z.string().optional().describe("Megjegyzés"),
+        settings: z.object({
+          mediated_service: z.boolean().optional(),
+          without_financial_fulfillment: z.boolean().optional(),
+          online_payment: z.string().optional(),
+          round: z.enum(["none", "one", "five", "ten"]).optional(),
+          place_id: z.number().optional(),
+        }).optional().describe("Számla beállítások"),
+        emails: z.array(z.string()).optional().describe("E-mail címek küldéshez"),
+        document_notification: z.boolean().default(false).describe("Értesítés küldése a partnernek"),
+        confirmation_id: confirmationIdSchema,
+      }),
+      annotations: { title: "Create Document", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     },
-    { title: "Create Document", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     confirm<Record<string, unknown>>(
       "create_document",
       async (a) => {
@@ -136,14 +142,16 @@ export function registerDocumentTools(
     ),
   );
 
-  server.tool(
+  server.registerTool(
     "cancel_document",
-    "Számla sztornózása",
     {
-      document_id: z.number().describe("A sztornózandó dokumentum ID-ja"),
-      confirmation_id: confirmationIdSchema,
+      description: "Számla sztornózása",
+      inputSchema: z.object({
+        document_id: z.number().describe("A sztornózandó dokumentum ID-ja"),
+        confirmation_id: confirmationIdSchema,
+      }),
+      annotations: { title: "Cancel Document", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
     },
-    { title: "Cancel Document", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
     confirm<{ document_id: number }>(
       "cancel_document",
       async ({ document_id }) => `Sztornó, visszavonhatatlan, a NAV felé is kimegy:\n${await documentLine(client, document_id)}`,
@@ -154,14 +162,16 @@ export function registerDocumentTools(
     ),
   );
 
-  server.tool(
+  server.registerTool(
     "delete_draft",
-    "Piszkozat számla törlése (csak draft típusra működik)",
     {
-      document_id: z.number().describe("A törlendő piszkozat ID-ja"),
-      confirmation_id: confirmationIdSchema,
+      description: "Piszkozat számla törlése (csak draft típusra működik)",
+      inputSchema: z.object({
+        document_id: z.number().describe("A törlendő piszkozat ID-ja"),
+        confirmation_id: confirmationIdSchema,
+      }),
+      annotations: { title: "Delete Draft", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
     },
-    { title: "Delete Draft", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
     confirm<{ document_id: number }>(
       "delete_draft",
       async ({ document_id }) => `Piszkozat törlése, visszavonhatatlan:\n${await documentLine(client, document_id)}`,
@@ -172,14 +182,16 @@ export function registerDocumentTools(
     ),
   );
 
-  server.tool(
+  server.registerTool(
     "create_from_proforma",
-    "Díjbekérőből (proforma) számla készítése",
     {
-      document_id: z.number().describe("A proforma dokumentum ID-ja"),
-      confirmation_id: confirmationIdSchema,
+      description: "Díjbekérőből (proforma) számla készítése",
+      inputSchema: z.object({
+        document_id: z.number().describe("A proforma dokumentum ID-ja"),
+        confirmation_id: confirmationIdSchema,
+      }),
+      annotations: { title: "Create From Proforma", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     },
-    { title: "Create From Proforma", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     confirm<{ document_id: number }>(
       "create_from_proforma",
       async ({ document_id }) => `Díjbekérőből végleges számla kiállítása, visszavonni csak sztornóval lehet:\n${await documentLine(client, document_id)}`,
@@ -190,14 +202,16 @@ export function registerDocumentTools(
     ),
   );
 
-  server.tool(
+  server.registerTool(
     "create_from_draft",
-    "Piszkozatból végleges számla készítése",
     {
-      document_id: z.number().describe("A piszkozat dokumentum ID-ja"),
-      confirmation_id: confirmationIdSchema,
+      description: "Piszkozatból végleges számla készítése",
+      inputSchema: z.object({
+        document_id: z.number().describe("A piszkozat dokumentum ID-ja"),
+        confirmation_id: confirmationIdSchema,
+      }),
+      annotations: { title: "Create From Draft", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     },
-    { title: "Create From Draft", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     confirm<{ document_id: number }>(
       "create_from_draft",
       async ({ document_id }) => `Piszkozatból végleges számla kiállítása, visszavonni csak sztornóval lehet:\n${await documentLine(client, document_id)}`,
@@ -208,18 +222,20 @@ export function registerDocumentTools(
     ),
   );
 
-  server.tool(
+  server.registerTool(
     "create_modification_document",
-    "Módosító bizonylat készítése egy meglévő számlához",
     {
-      document_id: z.number().describe("Az eredeti dokumentum ID-ja"),
-      items: z.array(DocumentItemSchema).describe("Módosító tételek"),
-      fulfillment_date: z.string().describe("Teljesítés dátuma (YYYY-MM-DD)"),
-      due_date: z.string().describe("Fizetési határidő (YYYY-MM-DD)"),
-      payment_method: paymentMethodSchema.describe("Fizetési mód"),
-      confirmation_id: confirmationIdSchema,
+      description: "Módosító bizonylat készítése egy meglévő számlához",
+      inputSchema: z.object({
+        document_id: z.number().describe("Az eredeti dokumentum ID-ja"),
+        items: z.array(DocumentItemSchema).describe("Módosító tételek"),
+        fulfillment_date: z.string().describe("Teljesítés dátuma (YYYY-MM-DD)"),
+        due_date: z.string().describe("Fizetési határidő (YYYY-MM-DD)"),
+        payment_method: paymentMethodSchema.describe("Fizetési mód"),
+        confirmation_id: confirmationIdSchema,
+      }),
+      annotations: { title: "Create Modification Document", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     },
-    { title: "Create Modification Document", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     confirm<{ document_id: number; items: ItemLike[]; fulfillment_date: string; due_date: string; payment_method: string; confirmation_id?: string }>(
       "create_modification_document",
       async (a) => {
@@ -241,16 +257,16 @@ export function registerDocumentTools(
     ),
   );
 
-  server.tool(
+  server.registerTool(
     "copy_document",
-    "Számla másolása (új számla készítése egy meglévő alapján)",
     {
-      document_id: z.number().describe("A másolandó dokumentum ID-ja"),
-      confirmation_id: confirmationIdSchema,
+      description: "Számla másolása (új számla készítése egy meglévő alapján)",
+      inputSchema: z.object({
+        document_id: z.number().describe("A másolandó dokumentum ID-ja"),
+        confirmation_id: confirmationIdSchema,
+      }),
+      annotations: { title: "Copy Document", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     },
-    { title: "Copy Document", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
-    // Confirmed until it is measured on a test account whether the copy is a draft or a document of the same type:
-    // the copy of an invoice may be a new invoice that goes to the NAV.
     confirm<{ document_id: number; confirmation_id?: string }>(
       "copy_document",
       async ({ document_id }) =>
@@ -262,14 +278,16 @@ export function registerDocumentTools(
     ),
   );
 
-  server.tool(
+  server.registerTool(
     "download_document",
-    "Számla PDF letöltése és mentése a megadott útvonalra",
     {
-      document_id: z.number().describe("A dokumentum ID-ja"),
-      output_path: z.string().describe("Fájl mentési útvonal (pl. /tmp/szamla.pdf)"),
+      description: "Számla PDF letöltése és mentése a megadott útvonalra",
+      inputSchema: z.object({
+        document_id: z.number().describe("A dokumentum ID-ja"),
+        output_path: z.string().describe("Fájl mentési útvonal (pl. /tmp/szamla.pdf)"),
+      }),
+      annotations: { title: "Download Document", readOnlyHint: true, destructiveHint: false, openWorldHint: true },
     },
-    { title: "Download Document", readOnlyHint: true, destructiveHint: false, openWorldHint: true },
     async ({ document_id, output_path }: { document_id: number; output_path: string }) => {
       const safePath = await validateOutputPath(output_path);
       const { data } = await client.requestBinary("GET", `/documents/${document_id}/download`, "application/pdf");
@@ -279,28 +297,32 @@ export function registerDocumentTools(
     },
   );
 
-  server.tool(
+  server.registerTool(
     "get_document_public_url",
-    "Nyilvános letöltési link generálása egy számlához",
     {
-      document_id: z.number().describe("A dokumentum ID-ja"),
+      description: "Nyilvános letöltési link generálása egy számlához",
+      inputSchema: z.object({
+        document_id: z.number().describe("A dokumentum ID-ja"),
+      }),
+      annotations: { title: "Get Document Public URL", readOnlyHint: true, destructiveHint: false, openWorldHint: true },
     },
-    { title: "Get Document Public URL", readOnlyHint: true, destructiveHint: false, openWorldHint: true },
     async ({ document_id }: { document_id: number }) => {
       const result = await client.get(`/documents/${document_id}/public-url`);
       return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
     },
   );
 
-  server.tool(
+  server.registerTool(
     "send_document",
-    "Számla küldése e-mailben a partnernek vagy megadott címekre",
     {
-      document_id: z.number().describe("A dokumentum ID-ja"),
-      emails: z.array(z.string()).optional().describe("E-mail címek (ha üres, a partner e-mail címére megy)"),
-      confirmation_id: confirmationIdSchema,
+      description: "Számla küldése e-mailben a partnernek vagy megadott címekre",
+      inputSchema: z.object({
+        document_id: z.number().describe("A dokumentum ID-ja"),
+        emails: z.array(z.string()).optional().describe("E-mail címek (ha üres, a partner e-mail címére megy)"),
+        confirmation_id: confirmationIdSchema,
+      }),
+      annotations: { title: "Send Document", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     },
-    { title: "Send Document", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     confirm<{ document_id: number; emails?: string[]; confirmation_id?: string }>(
       "send_document",
       async ({ document_id, emails }) =>
@@ -313,30 +335,34 @@ export function registerDocumentTools(
     ),
   );
 
-  server.tool(
+  server.registerTool(
     "get_payment",
-    "Számla fizetési előzményeinek lekérése",
     {
-      document_id: z.number().describe("A dokumentum ID-ja"),
+      description: "Számla fizetési előzményeinek lekérése",
+      inputSchema: z.object({
+        document_id: z.number().describe("A dokumentum ID-ja"),
+      }),
+      annotations: { title: "Get Payment", readOnlyHint: true, destructiveHint: false, openWorldHint: true },
     },
-    { title: "Get Payment", readOnlyHint: true, destructiveHint: false, openWorldHint: true },
     async ({ document_id }: { document_id: number }) => {
       const result = await client.get(`/documents/${document_id}/payments`);
       return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
     },
   );
 
-  server.tool(
+  server.registerTool(
     "update_payment",
-    "Fizetés rögzítése egy számlához",
     {
-      document_id: z.number().describe("A dokumentum ID-ja"),
-      date: z.string().describe("Fizetés dátuma (YYYY-MM-DD)"),
-      price: z.number().describe("Fizetett összeg"),
-      payment_method: paymentMethodSchema.describe("Fizetési mód"),
-      confirmation_id: confirmationIdSchema,
+      description: "Fizetés rögzítése egy számlához",
+      inputSchema: z.object({
+        document_id: z.number().describe("A dokumentum ID-ja"),
+        date: z.string().describe("Fizetés dátuma (YYYY-MM-DD)"),
+        price: z.number().describe("Fizetett összeg"),
+        payment_method: paymentMethodSchema.describe("Fizetési mód"),
+        confirmation_id: confirmationIdSchema,
+      }),
+      annotations: { title: "Update Payment", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
     },
-    { title: "Update Payment", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
     confirm<{ document_id: number; date: string; price: number; payment_method: string; confirmation_id?: string }>(
       "update_payment",
       async (a) =>
@@ -349,14 +375,16 @@ export function registerDocumentTools(
     ),
   );
 
-  server.tool(
+  server.registerTool(
     "delete_payment",
-    "Fizetési előzmény törlése",
     {
-      document_id: z.number().describe("A dokumentum ID-ja"),
-      confirmation_id: confirmationIdSchema,
+      description: "Fizetési előzmény törlése",
+      inputSchema: z.object({
+        document_id: z.number().describe("A dokumentum ID-ja"),
+        confirmation_id: confirmationIdSchema,
+      }),
+      annotations: { title: "Delete Payment", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
     },
-    { title: "Delete Payment", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
     confirm<{ document_id: number }>(
       "delete_payment",
       async ({ document_id }) => `Az összes fizetési előzmény törlése:\n${await documentLine(client, document_id)}`,
@@ -367,13 +395,15 @@ export function registerDocumentTools(
     ),
   );
 
-  server.tool(
+  server.registerTool(
     "get_online_szamla_status",
-    "NAV Online Számla státusz lekérése egy számlához",
     {
-      document_id: z.number().describe("A dokumentum ID-ja"),
+      description: "NAV Online Számla státusz lekérése egy számlához",
+      inputSchema: z.object({
+        document_id: z.number().describe("A dokumentum ID-ja"),
+      }),
+      annotations: { title: "Get Online Szamla Status", readOnlyHint: true, destructiveHint: false, openWorldHint: true },
     },
-    { title: "Get Online Szamla Status", readOnlyHint: true, destructiveHint: false, openWorldHint: true },
     async ({ document_id }: { document_id: number }) => {
       const result = await client.get(`/documents/${document_id}/online-szamla`);
       return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
