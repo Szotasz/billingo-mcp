@@ -1,10 +1,13 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { BillingoClient } from "../billingo-client.js";
+import { ConfirmationStore, confirmationIdSchema, withConfirmation } from "../confirm.js";
+import { namedLine } from "../summaries.js";
 
 export function registerBankAccountTools(
   server: McpServer,
   client: BillingoClient,
+  store: ConfirmationStore = new ConfirmationStore(),
 ) {
   server.tool(
     "list_bank_accounts",
@@ -71,11 +74,18 @@ export function registerBankAccountTools(
     "Bankszámla törlése",
     {
       bank_account_id: z.number().describe("A bankszámla ID-ja"),
+      confirmation_id: confirmationIdSchema,
     },
     { title: "Delete Bank Account", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
-    async ({ bank_account_id }: { bank_account_id: number }) => {
-      await client.delete(`/bank-accounts/${bank_account_id}`);
-      return { content: [{ type: "text" as const, text: `Bankszámla ${bank_account_id} sikeresen törölve.` }] };
-    },
+    withConfirmation<{ bank_account_id: number }>({
+      server,
+      store,
+      tool: "delete_bank_account",
+      describe: async ({ bank_account_id }) => `Bankszámla törlése, visszavonhatatlan:\n${await namedLine(client, "Bankszámla", `/bank-accounts/${bank_account_id}`, bank_account_id)}`,
+      run: async ({ bank_account_id }) => {
+        await client.delete(`/bank-accounts/${bank_account_id}`);
+        return { content: [{ type: "text" as const, text: `Bankszámla ${bank_account_id} sikeresen törölve.` }] };
+      },
+    }),
   );
 }

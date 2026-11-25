@@ -2,6 +2,8 @@ import { z } from "zod";
 import { paymentMethodSchema } from "./payment-methods.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { BillingoClient } from "../billingo-client.js";
+import { ConfirmationStore, confirmationIdSchema, withConfirmation } from "../confirm.js";
+import { namedLine } from "../summaries.js";
 
 const SpendingItemSchema = z.object({
   description: z.string().describe("Tétel leírása"),
@@ -17,6 +19,7 @@ const SpendingItemSchema = z.object({
 export function registerSpendingTools(
   server: McpServer,
   client: BillingoClient,
+  store: ConfirmationStore = new ConfirmationStore(),
 ) {
   server.tool(
     "list_spending",
@@ -103,11 +106,18 @@ export function registerSpendingTools(
     "Költség törlése",
     {
       spending_id: z.number().describe("A költség ID-ja"),
+      confirmation_id: confirmationIdSchema,
     },
     { title: "Delete Spending", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
-    async ({ spending_id }: { spending_id: number }) => {
-      await client.delete(`/spending/${spending_id}`);
-      return { content: [{ type: "text" as const, text: `Költség ${spending_id} sikeresen törölve.` }] };
-    },
+    withConfirmation<{ spending_id: number }>({
+      server,
+      store,
+      tool: "delete_spending",
+      describe: async ({ spending_id }) => `Költség törlése, visszavonhatatlan:\n${await namedLine(client, "Költség", `/spending/${spending_id}`, spending_id)}`,
+      run: async ({ spending_id }) => {
+        await client.delete(`/spending/${spending_id}`);
+        return { content: [{ type: "text" as const, text: `Költség ${spending_id} sikeresen törölve.` }] };
+      },
+    }),
   );
 }

@@ -12,9 +12,12 @@ export class BillingoApiError extends Error {
 
 export class BillingoClient {
   private apiKey: string;
+  private fetchImpl: typeof fetch;
 
-  constructor(apiKey: string) {
+  // fetchImpl: the HTTP call, injectable so the tests run on a fake Billingo layer and never reach the real API.
+  constructor(apiKey: string, fetchImpl: typeof fetch = fetch) {
     this.apiKey = apiKey;
+    this.fetchImpl = fetchImpl;
   }
 
   private async request(
@@ -41,7 +44,7 @@ export class BillingoClient {
       headers["Content-Type"] = "application/json";
     }
 
-    const res = await fetch(url.toString(), {
+    const res = await this.fetchImpl(url.toString(), {
       method,
       headers,
       body: body ? JSON.stringify(body) : undefined,
@@ -71,7 +74,7 @@ export class BillingoClient {
     accept: string,
   ): Promise<{ data: Buffer; contentType: string }> {
     const url = new URL(`${BASE_URL}${path}`).toString();
-    const res = await fetch(url, {
+    const res = await this.fetchImpl(url, {
       method,
       headers: {
         "X-API-KEY": this.apiKey,

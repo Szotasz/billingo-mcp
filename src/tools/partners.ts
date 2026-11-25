@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { BillingoClient } from "../billingo-client.js";
+import { ConfirmationStore, confirmationIdSchema, withConfirmation } from "../confirm.js";
+import { namedLine } from "../summaries.js";
 
 const AddressSchema = z.object({
   country_code: z.string().default("HU").describe("Országkód (ISO 3166-1 alpha-2)"),
@@ -12,6 +14,7 @@ const AddressSchema = z.object({
 export function registerPartnerTools(
   server: McpServer,
   client: BillingoClient,
+  store: ConfirmationStore = new ConfirmationStore(),
 ) {
   server.tool(
     "list_partners",
@@ -104,11 +107,18 @@ export function registerPartnerTools(
     "Partner törlése",
     {
       partner_id: z.number().describe("A partner ID-ja"),
+      confirmation_id: confirmationIdSchema,
     },
     { title: "Delete Partner", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
-    async ({ partner_id }: { partner_id: number }) => {
-      await client.delete(`/partners/${partner_id}`);
-      return { content: [{ type: "text" as const, text: `Partner ${partner_id} sikeresen törölve.` }] };
-    },
+    withConfirmation<{ partner_id: number }>({
+      server,
+      store,
+      tool: "delete_partner",
+      describe: async ({ partner_id }) => `Partner törlése, visszavonhatatlan:\n${await namedLine(client, "Partner", `/partners/${partner_id}`, partner_id)}`,
+      run: async ({ partner_id }) => {
+        await client.delete(`/partners/${partner_id}`);
+        return { content: [{ type: "text" as const, text: `Partner ${partner_id} sikeresen törölve.` }] };
+      },
+    }),
   );
 }

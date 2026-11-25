@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { BillingoClient } from "./billingo-client.js";
+import { ConfirmationStore } from "./confirm.js";
 import { registerDocumentTools } from "./tools/documents.js";
 import { registerPartnerTools } from "./tools/partners.js";
 import { registerProductTools } from "./tools/products.js";
@@ -31,12 +32,14 @@ export default function createServer({ config }: { config: Partial<SmitheryConfi
   });
 
   const client = new BillingoClient(getApiKey(config));
+  // One store for the two-step confirmations of this server (clients without elicitation).
+  const confirmations = new ConfirmationStore();
 
-  registerDocumentTools(server, client);
-  registerPartnerTools(server, client);
-  registerProductTools(server, client);
-  registerBankAccountTools(server, client);
-  registerSpendingTools(server, client);
+  registerDocumentTools(server, client, confirmations);
+  registerPartnerTools(server, client, confirmations);
+  registerProductTools(server, client, confirmations);
+  registerBankAccountTools(server, client, confirmations);
+  registerSpendingTools(server, client, confirmations);
   registerDocumentExportTools(server, client);
   registerOrganizationTools(server, client);
   registerUtilTools(server, client);
