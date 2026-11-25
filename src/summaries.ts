@@ -81,9 +81,10 @@ export async function documentLine(client: BillingoClient, documentId: number): 
 }
 
 /**
- * Who a send reaches. With explicit addresses those; without, the ACTUAL addresses of the document's partner, read
- * from the document (and the partner record when the document does not carry them). A partner's address can be
- * changed without a confirmation (update_partner), so "the partner's address" alone would not say where it goes.
+ * Who a send reaches. With explicit addresses those; without, the ACTUAL addresses of the document's partner. A
+ * partner's address can be changed without a confirmation (update_partner), and it is not known whether Billingo
+ * sends to the address the document carries or to the partner record's current one, so both are read, and when they
+ * differ both are shown.
  */
 export async function recipientLine(client: BillingoClient, documentId: number, emails?: string[]): Promise<string> {
   if (emails && emails.length > 0) return `Címzett: ${emails.join(", ")}`;
@@ -91,10 +92,20 @@ export async function recipientLine(client: BillingoClient, documentId: number, 
   try {
     const d = (await client.get(`/documents/${documentId}`)) as Record<string, unknown>;
     const partner = (d.partner ?? {}) as Record<string, unknown>;
-    let found = list(partner.emails);
-    if (found.length === 0 && typeof partner.id === "number") {
-      found = list(((await client.get(`/partners/${partner.id}`)) as Record<string, unknown>)?.emails);
+    const onDocument = list(partner.emails);
+    let current: string[] = [];
+    if (typeof partner.id === "number") {
+      try {
+        current = list(((await client.get(`/partners/${partner.id}`)) as Record<string, unknown>)?.emails);
+      } catch {
+        current = [];
+      }
     }
+    const same = onDocument.length === current.length && onDocument.every((e, i) => e === current[i]);
+    if (onDocument.length > 0 && current.length > 0 && !same) {
+      return `Címzett: ELTÉRÉS, ellenőrizd: a bizonylaton ${onDocument.join(", ")}, a partner jelenlegi címe ${current.join(", ")}`;
+    }
+    const found = current.length > 0 ? current : onDocument;
     if (found.length > 0) return `Címzett: ${found.join(", ")} (a partner e-mail címe)`;
     return "Címzett: a partnernek nincs olvasható e-mail címe; a küldés előtt ellenőrizd, hová megy";
   } catch {

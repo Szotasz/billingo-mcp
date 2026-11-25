@@ -34,7 +34,7 @@ const DOC = { id: 9001, invoice_number: "TEST-2026-1", type: "invoice", partner:
 interface Call { method: string; path: string; body?: unknown }
 
 /** A fake Billingo: canned GETs, every write recorded and answered with {ok:true}. Only api.billingo.hu. */
-function fakeBillingo() {
+function fakeBillingo(over: { doc?: Record<string, unknown> } = {}) {
   const calls: Call[] = [];
   const fetchImpl = (async (input: unknown, init?: RequestInit) => {
     const url = new URL(String(input));
@@ -44,7 +44,7 @@ function fakeBillingo() {
     calls.push({ method, path, body: init?.body ? JSON.parse(String(init.body)) : undefined });
     let body: unknown = { ok: true };
     if (method === "GET" && /^\/partners\/\d+$/.test(path)) body = PARTNER;
-    else if (method === "GET" && /^\/documents\/\d+$/.test(path)) body = DOC;
+    else if (method === "GET" && /^\/documents\/\d+$/.test(path)) body = over.doc ?? DOC;
     else if (method === "GET" && /^\/(products|spending|bank-accounts)\/\d+$/.test(path)) body = { name: "Teszt tétel" };
     return new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
   }) as typeof fetch;
@@ -53,8 +53,8 @@ function fakeBillingo() {
 
 type Elicit = (msg: string) => { action: "accept" | "decline" | "cancel"; content?: Record<string, unknown> } | Error;
 
-async function connect(opts: { elicit?: Elicit; now?: () => number } = {}) {
-  const billingo = fakeBillingo();
+async function connect(opts: { elicit?: Elicit; now?: () => number; doc?: Record<string, unknown> } = {}) {
+  const billingo = fakeBillingo({ doc: opts.doc });
   const server = new McpServer({ name: "billingo-test", version: "0.0.0" });
   const store = new ConfirmationStore(opts.now);
   registerDocumentTools(server, billingo.client, store);
@@ -183,6 +183,18 @@ test("send_document: without addresses the summary names the partner's ACTUAL ad
   await explicit.call("send_document", { document_id: 9001, emails: ["konyveles@example.com"] });
   assert.ok(explicit.asked[0].includes("konyveles@example.com"));
   assert.ok(!explicit.asked[0].includes("szamla@pelda.example"), "explicit addresses replace the partner's");
+});
+
+test("send_document: when the document's address and the partner's current one differ, both are shown", async () => {
+  const doc = { ...DOC, partner: { id: 501, name: "Példa Kft.", emails: ["regi@pelda.example"] } };
+  const s = await connect({ elicit: () => ({ action: "decline" }), doc });
+  await s.call("send_document", { document_id: 9001 });
+  assert.ok(s.asked[0].includes("ELTÉRÉS"), "the difference is named");
+  assert.ok(s.asked[0].includes("regi@pelda.example") && s.asked[0].includes("szamla@pelda.example"), "both addresses are shown");
+  const same = await connect({ elicit: () => ({ action: "decline" }), doc: { ...DOC, partner: { id: 501, name: "Példa Kft.", emails: ["szamla@pelda.example"] } } });
+  await same.call("send_document", { document_id: 9001 });
+  assert.ok(!same.asked[0].includes("ELTÉRÉS"), "no difference, no warning");
+  assert.deepEqual(s.writes(), []);
 });
 
 const GUARDED: Array<[string, Record<string, unknown>]> = [
