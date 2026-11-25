@@ -235,3 +235,23 @@ for (const [name, args] of GUARDED) {
     assert.equal(accepted.writes().length, 1, `${name} runs after an accept`);
   });
 }
+
+test("cancel_document: the reason and the recipients go in the API's body, and the summary names them", async () => {
+  const s = await connect({ elicit: accept });
+  const args = { document_id: 9001, cancellation_reason: "Hibás adószám", cancellation_recipients: ["szamla@pelda.example", "konyveles@pelda.example"] };
+  const r = await s.call("cancel_document", args);
+  assert.equal(r.isError, false);
+  assert.ok(s.asked[0].includes("Ok: Hibás adószám"));
+  assert.ok(s.asked[0].includes("Értesítés a sztornóról: szamla@pelda.example, konyveles@pelda.example"));
+  assert.deepEqual(s.writes(), [{ method: "POST", path: "/documents/9001/cancel", body: { cancellation_reason: "Hibás adószám", cancellation_recipients: "szamla@pelda.example,konyveles@pelda.example" } }]);
+});
+
+test("cancel_document: without a reason or recipients no body is sent; an invalid address is refused", async () => {
+  const s = await connect({ elicit: accept });
+  await s.call("cancel_document", { document_id: 9001 });
+  assert.deepEqual(s.writes(), [{ method: "POST", path: "/documents/9001/cancel", body: undefined }]);
+  const bad = await connect({ elicit: accept });
+  const r = await bad.call("cancel_document", { document_id: 9001, cancellation_recipients: ["not-an-address"] });
+  assert.equal(r.isError, true);
+  assert.deepEqual(bad.writes(), []);
+});
