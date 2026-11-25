@@ -148,15 +148,33 @@ export function registerDocumentTools(
       description: "Számla sztornózása",
       inputSchema: z.object({
         document_id: z.number().describe("A sztornózandó dokumentum ID-ja"),
+        // The API's DocumentCancellation body: both strings, the recipients comma-separated in one string.
+        // One line, at most 500 characters: the reason goes into the confirmation summary, the owner's only check before
+        // an irreversible step, and it often comes from a customer's mail. A line break or a control character could
+        // forge a line of the tool's own; a format character (right-to-left override, zero-width space) could reorder
+        // the line it is in (Dani's review on #10).
+        cancellation_reason: z.string().min(1).max(500).regex(/^[^\p{Cc}\p{Cf}\p{Zl}\p{Zp}]+$/u, "egysoros, vezérlő- és formázókarakter nélkül")
+          .optional().describe("A sztornó oka, egy sorban, legfeljebb 500 karakter (megjegyzés a sztornó bizonylaton)"),
+        cancellation_recipients: z.array(z.email()).min(1).max(20).optional().describe("Kiknek menjen értesítés a sztornóról (e-mail címek, legfeljebb 20)"),
         confirmation_id: confirmationIdSchema,
       }),
       annotations: { title: "Cancel Document", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
     },
-    confirm<{ document_id: number }>(
+    confirm<{ document_id: number; cancellation_reason?: string; cancellation_recipients?: string[] }>(
       "cancel_document",
-      async ({ document_id }) => `Sztornó, visszavonhatatlan, a NAV felé is kimegy:\n${await documentLine(client, document_id)}`,
-      async ({ document_id }) => {
-        const result = await client.post(`/documents/${document_id}/cancel`);
+      async ({ document_id, cancellation_reason, cancellation_recipients }) =>
+        [
+          `Sztornó, visszavonhatatlan, a NAV felé is kimegy:\n${await documentLine(client, document_id)}`,
+          ...(cancellation_reason ? [`Ok: ${cancellation_reason}`] : []),
+          ...(cancellation_recipients?.length ? [`Értesítés a sztornóról: ${cancellation_recipients.join(", ")}`] : []),
+        ].join("\n"),
+      async ({ document_id, cancellation_reason, cancellation_recipients }) => {
+        // The body is optional in the API: sent only when there is something in it.
+        const body = {
+          ...(cancellation_reason ? { cancellation_reason } : {}),
+          ...(cancellation_recipients?.length ? { cancellation_recipients: cancellation_recipients.join(",") } : {}),
+        };
+        const result = await client.post(`/documents/${document_id}/cancel`, Object.keys(body).length ? body : undefined);
         return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
       },
     ),
