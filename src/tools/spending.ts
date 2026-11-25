@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { paymentMethodSchema } from "./payment-methods.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { BillingoClient } from "../billingo-client.js";
 
@@ -62,7 +63,7 @@ export function registerSpendingTools(
       category: z.string().optional().describe("Kategória"),
       comment: z.string().optional().describe("Megjegyzés"),
       invoice_number: z.string().optional().describe("Számlaszám"),
-      payment_method: z.enum(["artutalas", "cash", "bankcard", "paypal", "szep_card", "coupon", "elore_utalas", "payoneer", "paylike", "barion", "ep_kartya", "compensation", "utalvany", "online_bankcard"]).describe("Fizetési mód"),
+      payment_method: paymentMethodSchema.describe("Fizetési mód"),
       items: z.array(SpendingItemSchema).describe("Tételek"),
     },
     { title: "Create Spending", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
@@ -86,7 +87,7 @@ export function registerSpendingTools(
       category: z.string().optional().describe("Kategória"),
       comment: z.string().optional().describe("Megjegyzés"),
       invoice_number: z.string().optional().describe("Számlaszám"),
-      payment_method: z.enum(["artutalas", "cash", "bankcard", "paypal", "szep_card", "coupon", "elore_utalas", "payoneer", "paylike", "barion", "ep_kartya", "compensation", "utalvany", "online_bankcard"]).optional().describe("Fizetési mód"),
+      payment_method: paymentMethodSchema.optional().describe("Fizetési mód"),
       items: z.array(SpendingItemSchema).optional().describe("Tételek"),
     },
     { title: "Update Spending", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },

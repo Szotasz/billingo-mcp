@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { paymentMethodSchema } from "./payment-methods.js";
 import { resolve, dirname } from "node:path";
 import { access, constants } from "node:fs/promises";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -44,7 +45,7 @@ export function registerDocumentTools(
       per_page: z.number().default(25).describe("Elemek száma oldalanként (max 100)"),
       block_id: z.number().optional().describe("Számlatömb ID"),
       partner_id: z.number().optional().describe("Partner ID"),
-      payment_method: z.enum(["artutalas", "cash", "bankcard", "paypal", "szep_card", "coupon", "elore_utalas", "payoneer", "paylike", "barion", "ep_kartya", "compensation", "utalvany", "online_bankcard"]).optional().describe("Fizetési mód"),
+      payment_method: paymentMethodSchema.optional().describe("Fizetési mód"),
       payment_status: z.enum(["paid", "outstanding", "expired"]).optional().describe("Fizetési státusz"),
       start_date: z.string().optional().describe("Kezdő dátum (YYYY-MM-DD)"),
       end_date: z.string().optional().describe("Vég dátum (YYYY-MM-DD)"),
@@ -82,7 +83,7 @@ export function registerDocumentTools(
       type: z.enum(["draft", "proforma", "invoice", "advance", "receipt", "waybill", "offer"]).describe("Bizonylat típusa"),
       fulfillment_date: z.string().describe("Teljesítés dátuma (YYYY-MM-DD)"),
       due_date: z.string().describe("Fizetési határidő (YYYY-MM-DD)"),
-      payment_method: z.enum(["artutalas", "cash", "bankcard", "paypal", "szep_card", "coupon", "elore_utalas", "payoneer", "paylike", "barion", "ep_kartya", "compensation", "utalvany", "online_bankcard"]).describe("Fizetési mód"),
+      payment_method: paymentMethodSchema.describe("Fizetési mód"),
       language: z.enum(["hu", "en", "de", "fr", "hr", "it", "ro", "sk", "es"]).default("hu").describe("Nyelv"),
       currency: z.string().default("HUF").describe("Pénznem (pl. HUF, EUR, USD)"),
       conversion_rate: z.number().optional().describe("Átváltási árfolyam (ha nem HUF)"),
@@ -167,7 +168,7 @@ export function registerDocumentTools(
       items: z.array(DocumentItemSchema).describe("Módosító tételek"),
       fulfillment_date: z.string().describe("Teljesítés dátuma (YYYY-MM-DD)"),
       due_date: z.string().describe("Fizetési határidő (YYYY-MM-DD)"),
-      payment_method: z.enum(["artutalas", "cash", "bankcard", "paypal", "szep_card", "coupon", "elore_utalas", "payoneer", "paylike", "barion", "ep_kartya", "compensation", "utalvany", "online_bankcard"]).describe("Fizetési mód"),
+      payment_method: paymentMethodSchema.describe("Fizetési mód"),
     },
     { title: "Create Modification Document", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     async (params: { document_id: number; items: unknown[]; fulfillment_date: string; due_date: string; payment_method: string }) => {
@@ -255,7 +256,7 @@ export function registerDocumentTools(
       document_id: z.number().describe("A dokumentum ID-ja"),
       date: z.string().describe("Fizetés dátuma (YYYY-MM-DD)"),
       price: z.number().describe("Fizetett összeg"),
-      payment_method: z.enum(["artutalas", "cash", "bankcard", "paypal", "szep_card", "coupon", "elore_utalas", "payoneer", "paylike", "barion", "ep_kartya", "compensation", "utalvany", "online_bankcard"]).describe("Fizetési mód"),
+      payment_method: paymentMethodSchema.describe("Fizetési mód"),
     },
     { title: "Update Payment", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
     async (params: { document_id: number; date: string; price: number; payment_method: string }) => {
