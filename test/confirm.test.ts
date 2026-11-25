@@ -51,7 +51,7 @@ function fakeBillingo(over: { doc?: Record<string, unknown> } = {}) {
 
 type Elicit = (msg: string) => { action: "accept" | "decline" | "cancel"; content?: Record<string, unknown> } | Error;
 
-async function connect(opts: { elicit?: Elicit; now?: () => number; doc?: Record<string, unknown> } = {}) {
+async function connect(opts: { elicit?: Elicit; now?: () => number; doc?: Record<string, unknown>; elicitation?: Record<string, unknown> } = {}) {
   const billingo = fakeBillingo({ doc: opts.doc });
   const server = new McpServer({ name: "billingo-test", version: "0.0.0" });
   const store = new ConfirmationStore(opts.now);
@@ -60,7 +60,7 @@ async function connect(opts: { elicit?: Elicit; now?: () => number; doc?: Record
   registerProductTools(server, billingo.client, store);
   registerSpendingTools(server, billingo.client, store);
   registerBankAccountTools(server, billingo.client, store);
-  const client = new Client({ name: "test-client", version: "0.0.0" }, { capabilities: opts.elicit ? { elicitation: {} } : {} });
+  const client = new Client({ name: "test-client", version: "0.0.0" }, { capabilities: opts.elicit ? { elicitation: opts.elicitation ?? {} } : {} });
   const asked: string[] = [];
   if (opts.elicit) {
     const elicit = opts.elicit;
@@ -125,6 +125,14 @@ test("with elicitation: a failed elicitation request issues nothing (fail closed
   const s = await connect({ elicit: () => new Error("client gave up") });
   const r = await s.call("cancel_document", { document_id: 9001 });
   assert.equal(r.isError, true);
+  assert.deepEqual(s.writes(), []);
+});
+
+test("a client with URL elicitation only is not sent a form: it gets the two-step path", async () => {
+  const s = await connect({ elicit: () => { throw new Error("must not be asked"); }, elicitation: { url: {} } });
+  const r = await s.call("cancel_document", { document_id: 9001 });
+  assert.match(r.text, /confirmation_id: "/);
+  assert.equal(s.asked.length, 0);
   assert.deepEqual(s.writes(), []);
 });
 
