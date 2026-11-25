@@ -3,6 +3,7 @@ import { McpServer } from "@modelcontextprotocol/server";
 import type { BillingoClient } from "../billingo-client.js";
 import { ConfirmationStore, confirmationIdSchema, withConfirmation } from "../confirm.js";
 import { namedLine } from "../summaries.js";
+import { partnerTaxTypeSchema } from "./partner-tax-types.js";
 
 const AddressSchema = z.object({
   country_code: z.string().default("HU").describe("Országkód (ISO 3166-1 alpha-2)"),
@@ -62,7 +63,7 @@ export function registerPartnerTools(
         account_number: z.string().optional().describe("Bankszámlaszám"),
         phone: z.string().optional().describe("Telefonszám"),
         general_ledger_number: z.string().optional().describe("Főkönyvi szám"),
-        tax_type: z.enum(["NO_TAX_NUMBER", "HAS_TAX_NUMBER", "TAXPAYER"]).optional().describe("Adó típus"),
+        tax_type: partnerTaxTypeSchema.optional().describe("Adó típus: HAS_TAX_NUMBER (belföldi adószámos), NO_TAX_NUMBER (adószám nélküli, pl. magánszemély), FOREIGN (külföldi)"),
         custom_billing_settings: z.object({
           payment_method: z.string().optional(),
           document_form: z.string().optional(),
@@ -99,7 +100,7 @@ export function registerPartnerTools(
         account_number: z.string().optional().describe("Bankszámlaszám"),
         phone: z.string().optional().describe("Telefonszám"),
         general_ledger_number: z.string().optional().describe("Főkönyvi szám"),
-        tax_type: z.enum(["NO_TAX_NUMBER", "HAS_TAX_NUMBER", "TAXPAYER"]).optional().describe("Adó típus"),
+        tax_type: partnerTaxTypeSchema.optional().describe("Adó típus: HAS_TAX_NUMBER (belföldi adószámos), NO_TAX_NUMBER (adószám nélküli, pl. magánszemély), FOREIGN (külföldi)"),
       }),
       annotations: { title: "Update Partner", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
     },
