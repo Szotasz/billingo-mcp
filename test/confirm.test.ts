@@ -1,9 +1,7 @@
 import { test, after } from "node:test";
 import assert from "node:assert/strict";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { ElicitRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import { Client } from "@modelcontextprotocol/client";
+import { McpServer, InMemoryTransport } from "@modelcontextprotocol/server";
 import { BillingoClient } from "../src/billingo-client.js";
 import { ConfirmationStore, CONFIRMATION_TTL_MS } from "../src/confirm.js";
 import { totals, vatRate } from "../src/summaries.js";
@@ -66,7 +64,7 @@ async function connect(opts: { elicit?: Elicit; now?: () => number; doc?: Record
   const asked: string[] = [];
   if (opts.elicit) {
     const elicit = opts.elicit;
-    client.setRequestHandler(ElicitRequestSchema, async (req) => {
+    client.setRequestHandler('elicitation/create', async (req) => {
       const message = (req.params as { message: string }).message;
       asked.push(message);
       const r = elicit(message);

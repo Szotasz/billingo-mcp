@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { McpServer } from "@modelcontextprotocol/server";
 import type { BillingoClient } from "../billingo-client.js";
 import { ConfirmationStore, confirmationIdSchema, withConfirmation } from "../confirm.js";
 import { namedLine } from "../summaries.js";
@@ -16,85 +16,93 @@ export function registerPartnerTools(
   client: BillingoClient,
   store: ConfirmationStore = new ConfirmationStore(),
 ) {
-  server.tool(
+  server.registerTool(
     "list_partners",
-    "Partnerek listázása szűrőkkel",
     {
-      page: z.number().default(1).describe("Oldalszám"),
-      per_page: z.number().default(25).describe("Elemek száma oldalanként"),
-      query: z.string().optional().describe("Keresés név, adószám vagy e-mail alapján"),
+      description: "Partnerek listázása szűrőkkel",
+      inputSchema: z.object({
+        page: z.number().default(1).describe("Oldalszám"),
+        per_page: z.number().default(25).describe("Elemek száma oldalanként"),
+        query: z.string().optional().describe("Keresés név, adószám vagy e-mail alapján"),
+      }),
+      annotations: { title: "List Partners", readOnlyHint: true, destructiveHint: false, openWorldHint: true },
     },
-    { title: "List Partners", readOnlyHint: true, destructiveHint: false, openWorldHint: true },
     async (params: Record<string, unknown>) => {
       const result = await client.get("/partners", params as Record<string, string | number | boolean | undefined>);
       return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
     },
   );
 
-  server.tool(
+  server.registerTool(
     "get_partner",
-    "Partner adatainak lekérése ID alapján",
     {
-      partner_id: z.number().describe("A partner ID-ja"),
+      description: "Partner adatainak lekérése ID alapján",
+      inputSchema: z.object({
+        partner_id: z.number().describe("A partner ID-ja"),
+      }),
+      annotations: { title: "Get Partner", readOnlyHint: true, destructiveHint: false, openWorldHint: true },
     },
-    { title: "Get Partner", readOnlyHint: true, destructiveHint: false, openWorldHint: true },
     async ({ partner_id }: { partner_id: number }) => {
       const result = await client.get(`/partners/${partner_id}`);
       return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
     },
   );
 
-  server.tool(
+  server.registerTool(
     "create_partner",
-    "Új partner (ügyfél/szállító) létrehozása",
     {
-      name: z.string().describe("Partner neve"),
-      address: AddressSchema.describe("Partner címe"),
-      emails: z.array(z.string()).optional().describe("E-mail címek"),
-      taxcode: z.string().optional().describe("Adószám"),
-      iban: z.string().optional().describe("IBAN bankszámlaszám"),
-      swift: z.string().optional().describe("SWIFT/BIC kód"),
-      account_number: z.string().optional().describe("Bankszámlaszám"),
-      phone: z.string().optional().describe("Telefonszám"),
-      general_ledger_number: z.string().optional().describe("Főkönyvi szám"),
-      tax_type: z.enum(["NO_TAX_NUMBER", "HAS_TAX_NUMBER", "TAXPAYER"]).optional().describe("Adó típus"),
-      custom_billing_settings: z.object({
-        payment_method: z.string().optional(),
-        document_form: z.string().optional(),
-        due_days: z.number().optional(),
-        document_currency: z.string().optional(),
-        template_language_code: z.string().optional(),
-        discount: z.object({
-          type: z.enum(["percent", "amount"]).optional(),
-          value: z.number().optional(),
-        }).optional(),
-      }).optional().describe("Egyéni számlázási beállítások"),
-      group_member_tax_number: z.string().optional().describe("Csoportos adószám"),
+      description: "Új partner (ügyfél/szállító) létrehozása",
+      inputSchema: z.object({
+        name: z.string().describe("Partner neve"),
+        address: AddressSchema.describe("Partner címe"),
+        emails: z.array(z.string()).optional().describe("E-mail címek"),
+        taxcode: z.string().optional().describe("Adószám"),
+        iban: z.string().optional().describe("IBAN bankszámlaszám"),
+        swift: z.string().optional().describe("SWIFT/BIC kód"),
+        account_number: z.string().optional().describe("Bankszámlaszám"),
+        phone: z.string().optional().describe("Telefonszám"),
+        general_ledger_number: z.string().optional().describe("Főkönyvi szám"),
+        tax_type: z.enum(["NO_TAX_NUMBER", "HAS_TAX_NUMBER", "TAXPAYER"]).optional().describe("Adó típus"),
+        custom_billing_settings: z.object({
+          payment_method: z.string().optional(),
+          document_form: z.string().optional(),
+          due_days: z.number().optional(),
+          document_currency: z.string().optional(),
+          template_language_code: z.string().optional(),
+          discount: z.object({
+            type: z.enum(["percent", "amount"]).optional(),
+            value: z.number().optional(),
+          }).optional(),
+        }).optional().describe("Egyéni számlázási beállítások"),
+        group_member_tax_number: z.string().optional().describe("Csoportos adószám"),
+      }),
+      annotations: { title: "Create Partner", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     },
-    { title: "Create Partner", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     async (params: Record<string, unknown>) => {
       const result = await client.post("/partners", params);
       return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
     },
   );
 
-  server.tool(
+  server.registerTool(
     "update_partner",
-    "Partner adatainak módosítása",
     {
-      partner_id: z.number().describe("A partner ID-ja"),
-      name: z.string().optional().describe("Partner neve"),
-      address: AddressSchema.optional().describe("Partner címe"),
-      emails: z.array(z.string()).optional().describe("E-mail címek"),
-      taxcode: z.string().optional().describe("Adószám"),
-      iban: z.string().optional().describe("IBAN bankszámlaszám"),
-      swift: z.string().optional().describe("SWIFT/BIC kód"),
-      account_number: z.string().optional().describe("Bankszámlaszám"),
-      phone: z.string().optional().describe("Telefonszám"),
-      general_ledger_number: z.string().optional().describe("Főkönyvi szám"),
-      tax_type: z.enum(["NO_TAX_NUMBER", "HAS_TAX_NUMBER", "TAXPAYER"]).optional().describe("Adó típus"),
+      description: "Partner adatainak módosítása",
+      inputSchema: z.object({
+        partner_id: z.number().describe("A partner ID-ja"),
+        name: z.string().optional().describe("Partner neve"),
+        address: AddressSchema.optional().describe("Partner címe"),
+        emails: z.array(z.string()).optional().describe("E-mail címek"),
+        taxcode: z.string().optional().describe("Adószám"),
+        iban: z.string().optional().describe("IBAN bankszámlaszám"),
+        swift: z.string().optional().describe("SWIFT/BIC kód"),
+        account_number: z.string().optional().describe("Bankszámlaszám"),
+        phone: z.string().optional().describe("Telefonszám"),
+        general_ledger_number: z.string().optional().describe("Főkönyvi szám"),
+        tax_type: z.enum(["NO_TAX_NUMBER", "HAS_TAX_NUMBER", "TAXPAYER"]).optional().describe("Adó típus"),
+      }),
+      annotations: { title: "Update Partner", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
     },
-    { title: "Update Partner", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
     async (params: { partner_id: number; [key: string]: unknown }) => {
       const { partner_id, ...body } = params;
       const result = await client.put(`/partners/${partner_id}`, body);
@@ -102,14 +110,16 @@ export function registerPartnerTools(
     },
   );
 
-  server.tool(
+  server.registerTool(
     "delete_partner",
-    "Partner törlése",
     {
-      partner_id: z.number().describe("A partner ID-ja"),
-      confirmation_id: confirmationIdSchema,
+      description: "Partner törlése",
+      inputSchema: z.object({
+        partner_id: z.number().describe("A partner ID-ja"),
+        confirmation_id: confirmationIdSchema,
+      }),
+      annotations: { title: "Delete Partner", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
     },
-    { title: "Delete Partner", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
     withConfirmation<{ partner_id: number }>({
       server,
       store,

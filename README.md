@@ -49,7 +49,7 @@ Read-only tools and creating a draft are not affected.
 
 ## Prerequisites
 
-- Node.js 18+
+- Node.js 20+
 - A [Billingo](https://www.billingo.hu/) account with an API v3 key ([generate one here](https://app.billingo.hu/api-key))
 
 ## Local Installation
@@ -158,7 +158,7 @@ Az olvasó eszközöket és a piszkozat létrehozását ez nem érinti.
 
 ## Előfeltételek
 
-- Node.js 18+
+- Node.js 20+
 - [Billingo](https://www.billingo.hu/) fiók API v3 kulccsal ([generálás itt](https://app.billingo.hu/api-key))
 
 ## Helyi telepítés

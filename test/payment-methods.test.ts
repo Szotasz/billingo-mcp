@@ -10,7 +10,9 @@ import { registerSpendingTools } from "../src/tools/spending.js";
 type Shape = Record<string, z.ZodTypeAny>;
 function shapesOf(register: (server: never, client: never) => void): Map<string, Shape> {
   const shapes = new Map<string, Shape>();
-  const server = { tool: (name: string, _desc: string, shape: Shape) => { shapes.set(name, shape); } };
+  const server = {
+    registerTool: (name: string, config: { inputSchema: z.ZodObject<Shape> }) => { shapes.set(name, config.inputSchema.shape); },
+  };
   const client = new Proxy({}, { get: () => () => { throw new Error("no Billingo call in tests"); } });
   register(server as never, client as never);
   return shapes;
