@@ -11,6 +11,8 @@ import { registerSpendingTools } from "./tools/spending.js";
 import { registerDocumentExportTools } from "./tools/document-export.js";
 import { registerOrganizationTools } from "./tools/organization.js";
 import { registerUtilTools } from "./tools/utils.js";
+import { registerPrompts } from "./prompts.js";
+import { registerSkills } from "./skills.js";
 
 const apiKey = process.env.BILLINGO_API_KEY;
 if (!apiKey) {
@@ -35,11 +37,15 @@ registerSpendingTools(server, client);
 registerDocumentExportTools(server, client);
 registerOrganizationTools(server, client);
 registerUtilTools(server, client);
+registerPrompts(server);
 
-const transport = new StdioServerTransport();
-server.connect(transport).then(() => {
-  console.error("Billingo MCP server running on stdio");
-}).catch((error) => {
-  console.error("Fatal error:", error);
-  process.exit(1);
-});
+// The skills are attached before connecting (the extension declares its capability at connect).
+registerSkills(server)
+  .then(() => server.connect(new StdioServerTransport()))
+  .then(() => {
+    console.error("Billingo MCP server running on stdio");
+  })
+  .catch((error) => {
+    console.error("Fatal error:", error);
+    process.exit(1);
+  });

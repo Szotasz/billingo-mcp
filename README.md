@@ -47,6 +47,17 @@ The tools that cannot be undone or that reach someone outside ask for a confirma
 
 Read-only tools and creating a draft are not affected.
 
+## Skills
+
+The server ships four billing guides with the tools, as MCP skills (the skills extension, SDK v2.4+), so a client that supports skills can load the rules when they are needed:
+
+- `issue-invoice`: the checks before issuing (no duplicate, the right partner and block, net or gross, the VAT code is the user's decision), and what to do after issuing.
+- `choose-payment-method`: `wire_transfer` vs `elore_utalas` vs `online_bankcard`, and the `paid` flag.
+- `handle-nav-rejection`: reading the NAV Online Számla status (`sent` is not accepted), and fixing a wrong invoice with a cancellation and a reissue.
+- `add-partner-with-tax-number`: `tax_type` (`HAS_TAX_NUMBER`, `NO_TAX_NUMBER`, `FOREIGN`) and the Hungarian tax number.
+
+For clients that do not support skills yet, each guide is also a prompt named `skill-<name>`. The guides are in `skills/`.
+
 ## Prerequisites
 
 - Node.js 20+
@@ -155,6 +166,17 @@ A visszavonhatatlan és a kifelé ható eszközök írás előtt megerősítést
   Ez az út fék, nem zár: az azonosítót maga a modell kapja meg, tehát azon múlik, hogy a modell megmutatja-e az összefoglalót a felhasználónak, és megvárja-e a válaszát. A felhasználót közvetlenül csak az elicitation kérdezi meg.
 
 Az olvasó eszközöket és a piszkozat létrehozását ez nem érinti.
+
+## Skillek
+
+A szerver az eszközök mellé négy számlázási útmutatót is ad MCP skillként (skills-kiterjesztés, SDK v2.4+), így a skilleket támogató kliens akkor tölti be a szabályokat, amikor szükség van rájuk:
+
+- `issue-invoice`: a kiállítás előtti ellenőrzések (nincs-e már számla, a jó partner és számlatömb, nettó vagy bruttó, az áfakulcs a felhasználó döntése), és a teendők a kiállítás után.
+- `choose-payment-method`: `wire_transfer`, `elore_utalas` vagy `online_bankcard`, és a `paid` jelölés.
+- `handle-nav-rejection`: a NAV Online Számla státusz olvasása (a `sent` még nem elfogadás), és a hibás számla javítása sztornóval és újrakiállítással.
+- `add-partner-with-tax-number`: a `tax_type` (`HAS_TAX_NUMBER`, `NO_TAX_NUMBER`, `FOREIGN`) és a magyar adószám.
+
+A skilleket még nem támogató kliensnek minden útmutató `skill-<név>` nevű promptként is elérhető. Az útmutatók a `skills/` mappában vannak.
 
 ## Előfeltételek
 
