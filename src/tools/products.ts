@@ -1,10 +1,13 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { BillingoClient } from "../billingo-client.js";
+import { ConfirmationStore, confirmationIdSchema, withConfirmation } from "../confirm.js";
+import { namedLine } from "../summaries.js";
 
 export function registerProductTools(
   server: McpServer,
   client: BillingoClient,
+  store: ConfirmationStore = new ConfirmationStore(),
 ) {
   server.tool(
     "list_products",
@@ -85,11 +88,18 @@ export function registerProductTools(
     "Termék törlése",
     {
       product_id: z.number().describe("A termék ID-ja"),
+      confirmation_id: confirmationIdSchema,
     },
     { title: "Delete Product", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
-    async ({ product_id }: { product_id: number }) => {
-      await client.delete(`/products/${product_id}`);
-      return { content: [{ type: "text" as const, text: `Termék ${product_id} sikeresen törölve.` }] };
-    },
+    withConfirmation<{ product_id: number }>({
+      server,
+      store,
+      tool: "delete_product",
+      describe: async ({ product_id }) => `Termék törlése, visszavonhatatlan:\n${await namedLine(client, "Termék", `/products/${product_id}`, product_id)}`,
+      run: async ({ product_id }) => {
+        await client.delete(`/products/${product_id}`);
+        return { content: [{ type: "text" as const, text: `Termék ${product_id} sikeresen törölve.` }] };
+      },
+    }),
   );
 }
