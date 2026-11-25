@@ -94,7 +94,7 @@ export function registerDocumentTools(
         type: z.enum(["draft", "proforma", "invoice", "advance", "receipt", "waybill", "offer"]).describe("Bizonylat típusa"),
         fulfillment_date: z.string().describe("Teljesítés dátuma (YYYY-MM-DD)"),
         due_date: z.string().describe("Fizetési határidő (YYYY-MM-DD)"),
-        payment_method: paymentMethodSchema.describe("Fizetési mód"),
+        payment_method: paymentMethodSchema.describe("Fizetési mód. Utólag fizetett átutalás: wire_transfer; előreutalás: elore_utalas; online kártyával már kifizetett: online_bankcard, paid: true. Részletek: a choose-payment-method skill."),
         language: z.enum(["hu", "en", "de", "fr", "hr", "it", "ro", "sk", "es"]).default("hu").describe("Nyelv"),
         currency: z.string().default("HUF").describe("Pénznem (pl. HUF, EUR, USD)"),
         conversion_rate: z.number().optional().describe("Átváltási árfolyam (ha nem HUF)"),
