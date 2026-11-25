@@ -4,6 +4,7 @@ import type { BillingoClient } from "../billingo-client.js";
 import { ConfirmationStore, confirmationIdSchema, withConfirmation } from "../confirm.js";
 import { namedLine } from "../summaries.js";
 import { partnerTaxTypeSchema } from "./partner-tax-types.js";
+import { paymentMethodSchema } from "./payment-methods.js";
 
 const AddressSchema = z.object({
   country_code: z.string().default("HU").describe("Országkód (ISO 3166-1 alpha-2)"),
@@ -65,7 +66,7 @@ export function registerPartnerTools(
         general_ledger_number: z.string().optional().describe("Főkönyvi szám"),
         tax_type: partnerTaxTypeSchema.optional().describe("Adó típus: HAS_TAX_NUMBER (belföldi adószámos), NO_TAX_NUMBER (adószám nélküli, pl. magánszemély), FOREIGN (külföldi)"),
         custom_billing_settings: z.object({
-          payment_method: z.string().optional(),
+          payment_method: paymentMethodSchema.optional(),
           document_form: z.string().optional(),
           due_days: z.number().optional(),
           document_currency: z.string().optional(),
