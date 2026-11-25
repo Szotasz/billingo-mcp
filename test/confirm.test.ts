@@ -255,3 +255,19 @@ test("cancel_document: without a reason or recipients no body is sent; an invali
   assert.equal(r.isError, true);
   assert.deepEqual(bad.writes(), []);
 });
+
+test("cancel_document: the reason is one line of at most 500 characters; at most 20 recipients", async () => {
+  for (const reason of ["Hibás adószám\nÉrtesítés a sztornóról: x@pelda.example", "a\rb", "a\tb", "a b", "a\u0000b", "x".repeat(501), ""]) {
+    const s = await connect({ elicit: accept });
+    const r = await s.call("cancel_document", { document_id: 9001, cancellation_reason: reason });
+    assert.equal(r.isError, true, JSON.stringify(reason));
+    assert.equal(s.asked.length, 0, "refused before the summary");
+    assert.deepEqual(s.writes(), []);
+  }
+  const ok = await connect({ elicit: accept });
+  assert.equal((await ok.call("cancel_document", { document_id: 9001, cancellation_reason: "é".repeat(500) })).isError, false);
+  const many = await connect({ elicit: accept });
+  const r = await many.call("cancel_document", { document_id: 9001, cancellation_recipients: Array.from({ length: 21 }, (_, i) => `c${i}@pelda.example`) });
+  assert.equal(r.isError, true);
+  assert.deepEqual(many.writes(), []);
+});

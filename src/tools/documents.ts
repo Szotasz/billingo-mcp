@@ -149,8 +149,12 @@ export function registerDocumentTools(
       inputSchema: z.object({
         document_id: z.number().describe("A sztornózandó dokumentum ID-ja"),
         // The API's DocumentCancellation body: both strings, the recipients comma-separated in one string.
-        cancellation_reason: z.string().min(1).optional().describe("A sztornó oka (megjegyzés a sztornó bizonylaton)"),
-        cancellation_recipients: z.array(z.email()).min(1).optional().describe("Kiknek menjen értesítés a sztornóról (e-mail címek)"),
+        // One line, at most 500 characters: the reason goes into the confirmation summary, the owner's only check before
+        // an irreversible step, and it often comes from a customer's mail. A line break or a control character could
+        // forge a line of the tool's own (Dani's review on #10).
+        cancellation_reason: z.string().min(1).max(500).regex(/^[^\p{Cc}\p{Zl}\p{Zp}]+$/u, "egysoros, vezérlőkarakter nélkül")
+          .optional().describe("A sztornó oka, egy sorban, legfeljebb 500 karakter (megjegyzés a sztornó bizonylaton)"),
+        cancellation_recipients: z.array(z.email()).min(1).max(20).optional().describe("Kiknek menjen értesítés a sztornóról (e-mail címek, legfeljebb 20)"),
         confirmation_id: confirmationIdSchema,
       }),
       annotations: { title: "Cancel Document", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
